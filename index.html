@@ -30,7 +30,6 @@
     .dev{display:none}
     .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .hint{font-size:12px; color:var(--muted)}
-    .brand{font-size:12px; color:#8ad2ff}
   </style>
 </head>
 <body>
@@ -71,8 +70,9 @@
 /*** CONFIG ***/
 const PROXY    = "/.netlify/functions/keyproxy";
 const DEVISSUE = "/.netlify/functions/dev-issue";
-const STEP1    = "https://link-hub.net/1380626/oXYyD2XlP2qW";
-const STEP2    = "https://link-hub.net/1380626/bouVTQdnXmmi";
+const STEP1    = "https://link-hub.net/1380626/oXYyD2XlP2qW";  // goes OUT to Linkvertise
+const STEP2    = "https://link-hub.net/1380626/bouVTQdnXmmi";  // goes OUT to Linkvertise
+// In Linkvertise, set Target URLs to:  https://timely-biscochitos-88e2f6.netlify.app/lv/1  and  /lv/2
 
 /*** STATE ***/
 let token = null;
@@ -97,28 +97,21 @@ function setActive(k){
     localStorage.setItem('activeKeyExp', String(k.expiresAt));
   }catch(_){}
 }
-function clearAllLocal(){
-  setActive(null);
-  clearLv();
-  // keep hwid
-}
+function clearAllLocal(){ setActive(null); clearLv(); /* keep hwid */ }
 
-/*** URL CAPTURE + PURGE (supports /lv/1 and /lv/2 and ?lv=1/2) ***/
+/*** URL CAPTURE + PURGE (also accepts ?lv=1/2 as fallback) ***/
 (function bootstrap(){
   const url = new URL(location.href);
   const hwid = url.searchParams.get('hwid');
   const lvQ  = url.searchParams.get('lv');
   const purge = url.searchParams.get('purge');
 
-  // /lv/1 or /lv/2 handled by those pages; here we also accept ?lv=1/2 for safety
   if (lvQ==='1') setLv(1);
   if (lvQ==='2') setLv(2);
   if (hwid) try{ localStorage.setItem('hwid', hwid); }catch(_){}
   if (purge==='1'){ clearAllLocal(); }
 
-  if (hwid || lvQ || purge) {
-    history.replaceState({}, '', '/'); // clean URL
-  }
+  if (hwid || lvQ || purge) history.replaceState({}, '', '/'); // clean URL
 })();
 
 /*** DEV TOGGLE ***/
@@ -154,7 +147,7 @@ function refresh(){
   document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-/*** SERVER SYNC — reconcile with backend so UI always matches reality ***/
+/*** SERVER SYNC — keep UI in sync with backend ***/
 async function syncWithServer(){
   const hwid = localStorage.getItem('hwid'); if(!hwid) return;
   try{
@@ -168,7 +161,6 @@ async function syncWithServer(){
       const k = { key:d.key, expiresAt:d.expiresAt };
       setActive(k); renderKeyCard(k);
     } else {
-      // server has no valid key for this HWID → wipe local so user must redo steps
       clearAllLocal(); renderKeyCard(null);
     }
     refresh();
@@ -180,7 +172,6 @@ async function init(){
   const local = getActive();
   if (local) renderKeyCard(local);
   refresh();
-  // Always reconcile (handles Admin resets / new key issuance)
   await syncWithServer();
 }
 init();
@@ -188,8 +179,8 @@ init();
 /*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  // /lv/1 and /lv/2 are real pages that do server-side anti-bypass check via lv-verify
-  window.open(s1 ? "/lv/2" : "/lv/1", '_blank');
+  // IMPORTANT: go OUT to Linkvertise first!
+  window.open(s1 ? STEP2 : STEP1, '_blank');
 };
 
 document.getElementById('btnGet').onclick = async () => {
@@ -207,7 +198,6 @@ document.getElementById('btnGet').onclick = async () => {
       setActive(k); renderKeyCard(k); refresh();
     } else {
       alert('Error: '+(d.error||'unknown'));
-      // if server says expired/not_found/superseded: wipe local so user restarts
       if (d && d.error && d.error !== 'turnstile_failed') { clearAllLocal(); refresh(); }
     }
   } finally { document.getElementById('btnGet').disabled=false; }
