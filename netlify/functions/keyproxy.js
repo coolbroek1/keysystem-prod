@@ -1,58 +1,73 @@
-// netlify/functions/keyproxy.js
+// netlify/functions/keyproxy.js — robust: JSON + FORM + GET fallback
 exports.handler = async (event) => {
-  const method = (event.httpMethod || 'POST').toUpperCase();
-  if (method === 'OPTIONS') return resp(200, {});
-  if (method !== 'POST')    return resp(405, { ok:false, error:'method_not_allowed' });
+  if (event.httpMethod === 'OPTIONS') return resp(200, {});
+  const APPS_EXEC = process.env.APPS_EXEC;
+  if (!APPS_EXEC) return resp(500, { ok:false, error:'missing_APPS_EXEC' });
+
+  const h = event.headers || {};
+  const ct = (h['content-type'] || h['Content-Type'] || '').toLowerCase();
+
+  let payload = {};
+  let src = 'none';
 
   try {
-    const APPS_EXEC = process.env.APPS_EXEC;
-    if (!APPS_EXEC) return resp(500, { ok:false, error:'missing_APPS_EXEC' });
-
-    const h  = event.headers || {};
-    const ct = (h['content-type'] || h['Content-Type'] || '').toLowerCase();
-    const raw = event.body || '';
-
-    let payload = {};
-    if (ct.includes('application/x-www-form-urlencoded')) {
-      payload = parseForm(raw);
-    } else if (raw) {
-      try { payload = JSON.parse(raw); } catch { payload = {}; }
+    if (event.httpMethod === 'GET') {
+      payload = event.queryStringParameters || {};
+      src = 'qs';
+    } else if (ct.includes('application/json')) {
+      payload = JSON.parse(event.body || '{}');
+      src = 'json';
+    } else if (ct.includes('application/x-www-form-urlencoded')) {
+      payload = parseForm(event.body || '');
+      src = (event.body && event.body.length > 0) ? 'form' : 'form-empty';
+    } else {
+      // probeer JSON alsnog
+      payload = JSON.parse(event.body || '{}');
+      src = 'unknown';
     }
+  } catch (_) {
+    payload = {};
+    src = 'parse-error';
+  }
 
-    // Fallback: pak ook querystring als body leeg of action ontbreekt
-    if (!payload.action) {
-      const q = event.queryStringParameters || {};
-      if (q && (q.action || q.hwid || q.key)) payload = q;
-    }
+  const len = (event.body || '').length;
+  const action = payload.action || 'undefined';
+  console.log(`[keyproxy] m=${event.httpMethod} ct=${ct} len=${len} src=${src} action=${action}`);
 
-    console.log(`[keyproxy] m=${method} ct=${ct} len=${raw.length} action=${payload.action||'undefined'}`);
+  // Extra fallback: sommige clients zetten body leeg maar parameters in de URL
+  if ((!payload || Object.keys(payload).length === 0 || action === 'undefined')
+      && event.queryStringParameters && Object.keys(event.queryStringParameters).length) {
+    payload = event.queryStringParameters;
+  }
 
-    // Stuur door naar Apps Script (altijd JSON)
+  if (!payload.action) {
+    return resp(200, { ok:false, error:'unknown_action' });
+  }
+
+  try {
     const r = await fetch(APPS_EXEC, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      redirect: 'follow' // ok; Apps Script 302 wordt gevolgd
     });
-
     const text = await r.text();
-    console.log(`[keyproxy] RESP ${r.status} ${text.slice(0,200)}`);
+    console.log(`[keyproxy] RESP ${r.status} ${text.slice(0,160)}`);
     return resp(r.ok ? 200 : 500, text, true);
   } catch (e) {
-    console.error('[keyproxy] error', e);
     return resp(500, { ok:false, error:String(e) });
   }
 };
 
 function parseForm(body){
   const out = {};
-  for (const part of String(body).split('&')){
+  for (const part of (body || '').split('&')){
     if (!part) continue;
     const [k,v=''] = part.split('=');
     out[decodeURIComponent(k.replace(/\+/g,' '))] = decodeURIComponent(v.replace(/\+/g,' '));
   }
   return out;
 }
+
 function resp(status, body, passthrough=false){
   return {
     statusCode: status,
@@ -60,7 +75,7 @@ function resp(status, body, passthrough=false){
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
     },
     body: passthrough ? body : JSON.stringify(body),
   };
