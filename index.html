@@ -43,7 +43,7 @@
       </div>
 
       <div class="row">
-        <div id="keyRow" class="muted">Nog geen key. Rond beide stappen af en klik <b>Get Key</b>.</div>
+        <div id="keyRow" class="muted">No key yet? Complete both steps and click Get Key. <b>Get Key</b>.</div>
       </div>
 
       <div class="row">
@@ -129,7 +129,7 @@ function refresh(){
   document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
   const hasActive = !!getActive();
   document.getElementById('btnGet').disabled = hasActive || !(s1 && s2 && !!token);
-  document.getElementById('hint').textContent = !hasActive && !(s1&&s2) ? 'Voltooi beide stappen; terugkeer via /lv/1 en /lv/2 telt automatisch mee.' : '';
+  document.getElementById('hint').textContent = !hasActive && !(s1&&s2) ? 'by Ezyscript ❤️' : '';
 }
 
 // open juiste Linkvertise stap
