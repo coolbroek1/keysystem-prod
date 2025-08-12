@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8"/>
+<title>Debug</title>
+<style>
+  body{font-family:system-ui,Arial;padding:20px}
+  pre{white-space:pre-wrap;background:#111;color:#eee;padding:10px;border-radius:8px}
+  input,button{padding:8px 12px;margin:4px}
+</style>
+<h1>Debug</h1>
+<p>Test GET/POST naar Netlify Functions.</p>
+<div>
+  <button id="kpget">GET /keyproxy</button>
+  <button id="diget">GET /dev-issue</button>
+</div>
+<hr>
+<h3>POST tests</h3>
+<label>HWID: <input id="hwid" value="TEST123"></label>
+<div>
+  <button id="devpost">POST /dev-issue (quick key)</button>
+  <button id="reqpost">POST /keyproxy (request_key dummy)</button>
+</div>
+<pre id="out"></pre>
+<script>
+const OUT = document.getElementById('out');
+async function show(url, opt){
+  OUT.textContent = 'fetch '+url+' ...';
+  const r = await fetch(url, opt);
+  const t = await r.text();
+  OUT.textContent = 'STATUS '+r.status+'\n\n'+t;
+}
+document.getElementById('kpget').onclick  =()=>show('/.netlify/functions/keyproxy');
+document.getElementById('diget').onclick  =()=>show('/.netlify/functions/dev-issue');
+document.getElementById('devpost').onclick = ()=>{
+  const hwid = document.getElementById('hwid').value.trim();
+  show('/.netlify/functions/dev-issue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hwid }) });
+};
+document.getElementById('reqpost').onclick = ()=>{
+  const hwid = document.getElementById('hwid').value.trim();
+  show('/.netlify/functions/keyproxy', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'request_key', hwid, turnstileToken:'dummy' }) });
+};
+</script>

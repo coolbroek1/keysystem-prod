@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8">
+<script>
+try{ localStorage.setItem('lv1','1'); }catch(e){}
+const u = new URL(location.href); const hwid=u.searchParams.get('hwid');
+location.replace('/' + (hwid? ('?hwid='+encodeURIComponent(hwid)+'&lv=1') : '?lv=1'));
+</script>
+<body>Step 1 done. Redirecting…</body>

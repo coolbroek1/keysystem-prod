@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Key</title>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <style>
+    :root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh}
+    .wrap{max-width:1080px; margin:80px auto; padding:0 20px}
+    .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden}
+    .card-top{padding:24px; background:var(--cardTop); display:flex; align-items:center; gap:16px; justify-content:space-between}
+    .title{font-weight:700; font-size:20px}
+    .right{display:flex; align-items:center; gap:20px}
+    .muted{color:var(--muted); font-size:14px}
+    .bar{height:6px; background:#0f1726; border-radius:999px; overflow:hidden}
+    .bar>span{display:block; height:100%; width:0%; background:var(--accent)}
+    .footer{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px; border-top:1px solid var(--line)}
+    .btn{padding:10px 16px; border-radius:10px; border:1px solid #2a3553; cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600}
+    .btn.green{background:var(--green); border-color:var(--green); color:#fff}
+    .btn.blue{background:var(--blue); border-color:var(--blue); color:#fff}
+    .btn[disabled]{opacity:.5; cursor:not-allowed}
+    .keycard{padding:22px;}
+    .key{font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726; border-radius:10px; display:inline-block}
+    .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
+    .dev{display:none}
+    .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .hint{font-size:12px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-top">
+        <div class="title">Key</div>
+        <div class="right">
+          <div class="muted">Progress: <span id="progLabel">0/2</span>
+            <div class="bar"><span id="progBar"></span></div>
+          </div>
+          <button id="btnStart" class="btn green">⎘ START</button>
+        </div>
+      </div>
+
+      <div class="keycard">
+        <div id="keyRow" class="muted">Nog geen key. Rond beide stappen af en klik <b>Get Key</b>.</div>
+      </div>
+
+      <div class="footer">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
+          <button id="btnGet" class="btn blue" disabled>Get Key</button>
+          <div class="hint" id="hint"></div>
+        </div>
+        <div id="devbar" class="dev">
+          <input id="devHwid" placeholder="HWID" style="padding:8px 10px;border-radius:8px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;" />
+          <button id="btnDev" class="btn">DEV: Quick Key</button>
+          <span class="hint">(Alt+D toont/verbergt deze balk)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const PROXY = "/.netlify/functions/keyproxy";
+const DEVISSUE = "/.netlify/functions/dev-issue";
+const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
+
+let token = null;
+window.onTurnstile = t => { token = t; refresh(); };
+
+function setLv(n){ localStorage.setItem('lv'+n, '1'); }
+function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
+
+(function bootstrapLV(){
+  const url = new URL(location.href);
+  const lvQ = url.searchParams.get('lv');
+  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
+  if (lvQ==='1' || (m && m[1]==='1')) setLv(1);
+  if (lvQ==='2' || (m && m[1]==='2')) setLv(2);
+  const hwid = url.searchParams.get('hwid');
+  if (hwid) localStorage.setItem('hwid', hwid);
+  if (lvQ || m || hwid) history.replaceState({}, '', '/');
+})();
+
+window.addEventListener('keydown', (e)=>{
+  if (e.altKey && (e.key==='d' || e.key==='D')){
+    const v = localStorage.getItem('dev')==='1' ? '0' : '1';
+    localStorage.setItem('dev', v);
+    document.getElementById('devbar').classList.toggle('show', v==='1');
+  }
+});
+const qs = new URL(location.href).searchParams;
+if (qs.get('dev')==='1') localStorage.setItem('dev','1');
+document.getElementById('devbar').classList.toggle('show', localStorage.getItem('dev')==='1');
+
+function getActive(){
+  const k = localStorage.getItem('activeKey');
+  const e = Number(localStorage.getItem('activeKeyExp') || 0);
+  if (!k || !e || Date.now()>e) return null; return { key:k, expiresAt:e };
+}
+function setActive(k){
+  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
+  localStorage.setItem('activeKey', k.key);
+  localStorage.setItem('activeKeyExp', String(k.expiresAt));
+}
+function fmtLeft(exp){ const ms = Math.max(0, exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
+function renderKeyCard(k){
+  const row=document.getElementById('keyRow');
+  if(!k){ row.innerHTML='Nog geen key. Rond beide stappen af en klik <b>Get Key</b>.'; return;}
+  const left=fmtLeft(k.expiresAt);
+  row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
+  document.getElementById('copyBtn').onclick=()=>navigator.clipboard.writeText(k.key);
+}
+
+function refresh(){
+  const { s1,s2 } = flags(); const prog=(s1?1:0)+(s2?1:0);
+  document.getElementById('progLabel').textContent = `${prog}/2`;
+  document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
+  const hasActive = !!getActive();
+  const cfOk = !!token;
+  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOk);
+  document.getElementById('hint').textContent = cfOk ? '' : 'Turnstile nog niet afgerond — klik op het vakje (of adblock uit)';
+}
+
+async function init(){
+  const local = getActive(); if(local) renderKeyCard(local);
+  refresh();
+}
+
+document.getElementById('btnStart').onclick = () => { const { s1,s2 } = flags(); window.open(s1 ? STEP2 : STEP1, '_blank'); };
+
+document.getElementById('btnGet').onclick = async () => {
+  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
+  try{
+    document.getElementById('btnGet').disabled=true;
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ action:'request_key', hwid, turnstileToken: token })});
+    const txt = await r.text();
+    let d = {}; try{ d = JSON.parse(txt); }catch(e){ alert('Server gaf geen JSON terug. RAW:\n'+txt.slice(0,400)); return; }
+    if(d.ok&&d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
+    else alert('Error: '+(d.error||'unknown'));
+  } finally { document.getElementById('btnGet').disabled=false; }
+};
+
+const devStatus = document.getElementById('devStatus');
+document.getElementById('btnDev').onclick = async () => {
+  const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?'); if(!hwid) { return; }
+  try{
+    document.getElementById('btnDev').disabled=true;
+    const r = await fetch('/.netlify/functions/dev-issue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hwid }) });
+    const txt = await r.text();
+    let d = {}; try{ d = JSON.parse(txt); }catch(e){ alert('Dev error: geen JSON\nRAW: '+String(txt).slice(0,500)); return; }
+    if (d.ok && d.key){
+      const k={key:d.key, expiresAt:d.expiresAt};
+      setActive(k); renderKeyCard(k); refresh();
+      try{ await navigator.clipboard.writeText(k.key); }catch(_){}
+    } else {
+      alert('Dev error: '+(d.error||'unknown'));
+    }
+  } catch(e){
+    alert('Network error: '+e);
+  } finally { document.getElementById('btnDev').disabled=false; }
+};
+
+init();
+</script>
+</body>
+</html>
