@@ -1,32 +1,37 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Key</title>
+<title>Key • by Ezyscript❤️</title>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
-:root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
-*{box-sizing:border-box}
-body{margin:0;font-family:Inter,system-ui,Arial;color:var(--text);background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628);min-height:100vh}
-.wrap{max-width:1080px;margin:80px auto;padding:0 20px}
-.card{background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden}
-.card-top{padding:24px;background:var(--cardTop);display:flex;align-items:center;gap:16px;justify-content:space-between}
-.title{font-weight:700;font-size:20px}
-.right{display:flex;align-items:center;gap:20px}
-.muted{color:var(--muted);font-size:14px}
-.bar{height:6px;background:#0f1726;border-radius:999px;overflow:hidden}
-.bar>span{display:block;height:100%;width:0%;background:var(--accent)}
-.footer{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px;border-top:1px solid var(--line)}
-.btn{padding:10px 16px;border-radius:10px;border:1px solid #2a3553;cursor:pointer;background:#182139;color:#dfe7ff;font-weight:600}
-.btn.green{background:var(--green);border-color:var(--green);color:#fff}
-.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
-.btn[disabled]{opacity:.5;cursor:not-allowed}
-.keycard{padding:22px}
-.key{font-family:ui-monospace,Menlo,Consolas;padding:10px 12px;background:#0f1726;border-radius:10px;display:inline-block}
-.pill{padding:6px 10px;background:rgba(46,204,113,.15);color:#56e39f;border-radius:999px;font-size:12px;margin-left:10px}
-.hint{font-size:12px;color:var(--muted)}
-.small{font-size:12px;color:#9aa3b2}
+  :root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
+  *{box-sizing:border-box}
+  body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh}
+  .wrap{max-width:1080px; margin:80px auto; padding:0 20px}
+  .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden}
+  .card-top{padding:24px; background:var(--cardTop); display:flex; align-items:center; gap:16px; justify-content:space-between}
+  .title{font-weight:700; font-size:20px}
+  .right{display:flex; align-items:center; gap:20px}
+  .muted{color:var(--muted); font-size:14px}
+
+  .bar{height:6px; background:#0f1726; border-radius:999px; overflow:hidden}
+  .bar>span{display:block; height:100%; width:0%; background:var(--accent)}
+  .footer{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px; border-top:1px solid var(--line)}
+  .btn{padding:10px 16px; border-radius:10px; border:1px solid #2a3553; cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600}
+  .btn.green{background:var(--green); border-color:var(--green); color:#fff}
+  .btn.blue{background:var(--blue); border-color:var(--blue); color:#fff}
+  .btn[disabled]{opacity:.5; cursor:not-allowed}
+  .keycard{padding:22px;}
+  .key{font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726; border-radius:10px; display:inline-block}
+  .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
+  .hint{font-size:12px; color:var(--muted)}
+
+  /* link box: single-line, horizontal scroll */
+  .linkwrap{max-width:520px; background:#0f1726; border-radius:10px; border:1px solid #2a3553; overflow:auto; white-space:nowrap; padding:8px 10px; font:14px/1.4 ui-monospace,Menlo,Consolas}
+  .linkwrap::-webkit-scrollbar{height:8px}
+  .linkwrap::-webkit-scrollbar-thumb{background:#26314f; border-radius:999px}
 </style>
 </head>
 <body>
@@ -38,103 +43,133 @@ body{margin:0;font-family:Inter,system-ui,Arial;color:var(--text);background:lin
           <div class="muted">Progress: <span id="progLabel">0/2</span>
             <div class="bar"><span id="progBar"></span></div>
           </div>
-          <button id="btnStart" class="btn green">Get link</button>
+          <button id="btnStart" class="btn green">Get Key</button>
         </div>
       </div>
 
       <div class="keycard">
-        <div id="keyRow" class="muted">No key yet. Finish both steps, then press <b>Get Key</b>.</div>
+        <div id="keyRow" class="muted">No key yet. Complete both steps and click <b>Get Key</b>. <span class="hint">by Ezyscript❤️</span></div>
       </div>
 
       <div class="footer">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+          <div class="linkwrap" id="linkBox"></div>
           <button id="btnGet" class="btn blue" disabled>Get Key</button>
-          <div class="hint" id="hint">by Ezyscript❤️</div>
+          <div class="hint" id="hint"></div>
         </div>
-        <div class="small">HWID is auto-filled when you open from Roblox.</div>
+        <div id="devbar" style="display:flex; gap:10px; align-items:center">
+          <input id="devHwid" placeholder="HWID" style="padding:8px 10px;border-radius:8px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;" />
+          <button id="btnDev" class="btn">DEV: Quick Key</button>
+        </div>
       </div>
     </div>
   </div>
 
 <script>
-const PROXY = "/.netlify/functions/keyproxy";
-const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
-const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
+const PROXY     = "/.netlify/functions/keyproxy";
+const LVVERIFY  = "/.netlify/functions/lv-verify"; // <— nieuw
+const STEP1_URL = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2_URL = "https://link-hub.net/1380626/bouVTQdnXmmi";
+const SITE      = location.origin;
 
-let token=null;
-window.onTurnstile = t => { token = t; refresh(); };
+let turnstileToken = null;
+window.onTurnstile = t => { turnstileToken = t; refresh(); };
 
-// ---- Progress capture (handles ?step=1/2 or ?lv=1/2 and /lv/1 or /lv/2)
-(function captureStep(){
-  const url = new URL(location.href);
-  const stepQ = url.searchParams.get('step') || url.searchParams.get('lv');
-  const pathMatch = location.pathname.match(/\/lv\/(1|2)\/?$/);
-  const hwid = url.searchParams.get('hwid');
+// progress helpers
+function setLv(n){ localStorage.setItem('lv'+n,'1'); }
+function flags(){ return { s1:localStorage.getItem('lv1')==='1', s2:localStorage.getItem('lv2')==='1' }; }
 
-  if (hwid) localStorage.setItem('hwid', hwid);
-  const mark = stepQ || (pathMatch && pathMatch[1]) || null;
-  if (mark === '1') localStorage.setItem('lv1','1');
-  if (mark === '2') localStorage.setItem('lv2','1');
-
-  if (mark || hwid) history.replaceState({}, '', '/'); // schoon URL na registreren
-})();
-
-function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.removeItem('activeKeyExp');return} localStorage.setItem('activeKey',k.key); localStorage.setItem('activeKeyExp',String(k.expiresAt));}
-function getActive(){ const k=localStorage.getItem('activeKey'); const e=Number(localStorage.getItem('activeKeyExp')||0); if(!k||!e||Date.now()>e) return null; return {key:k,expiresAt:e}; }
-function fmtLeft(exp){ const ms=Math.max(0,exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
-function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
-
-function renderKeyCard(k){
-  const row=document.getElementById('keyRow');
-  if(!k){ row.innerHTML='No key yet. Finish both steps, then press <b>Get Key</b>.'; return; }
-  row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${fmtLeft(k.expiresAt)} left</span>`;
+function getActive(){
+  const k = localStorage.getItem('activeKey');
+  const e = Number(localStorage.getItem('activeKeyExp')||0);
+  if (!k || !e || Date.now()>e) return null;
+  return { key:k, expiresAt:e };
 }
+function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.removeItem('activeKeyExp');return;}
+  localStorage.setItem('activeKey', k.key); localStorage.setItem('activeKeyExp', String(k.expiresAt));
+}
+function fmtLeft(exp){ const ms = Math.max(0, exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
+function renderKeyCard(k){ const row=document.getElementById('keyRow'); if(!k){ row.innerHTML='No key yet. Complete both steps and click <b>Get Key</b>. <span class="hint">by Ezyscript❤️</span>'; return;} const left=fmtLeft(k.expiresAt); row.innerHTML=`<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span>`; }
+
+function hwidFromURL(){ return new URL(location.href).searchParams.get('hwid'); }
 
 function refresh(){
-  const {s1,s2}=flags(); const prog=(s1?1:0)+(s2?1:0);
+  const { s1,s2 } = flags(); const prog=(s1?1:0)+(s2?1:0);
   document.getElementById('progLabel').textContent = `${prog}/2`;
   document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
+
   const hasActive = !!getActive();
-  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&!!token);
-  document.getElementById('hint').textContent = 'by Ezyscript❤️';
+  const cfOK = !!turnstileToken;
+  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOK);
+  document.getElementById('hint').textContent = hasActive ? '' : (!cfOK ? 'Complete the Turnstile box first' : '');
 }
 
-async function init(){
-  const local = getActive(); if(local) renderKeyCard(local);
+// build visible link (scrollable)
+(function(){
+  const hwid = hwidFromURL() || localStorage.getItem('hwid') || '';
+  if (hwid) localStorage.setItem('hwid', hwid);
+  const url  = SITE + "/?hwid=" + encodeURIComponent(hwid || "");
+  document.getElementById('linkBox').textContent = url;
+})();
+
+// capture ?hash & ?step=1/2 → server verify
+(async function verifyLV(){
+  const u   = new URL(location.href);
+  const hash= u.searchParams.get('hash');
+  const step= u.searchParams.get('step'); // we zetten step=1 of 2 in je Linkvertise target
+  const hwid= u.searchParams.get('hwid');
+  if (hwid) localStorage.setItem('hwid', hwid);
+
+  if (hash && (step==='1' || step==='2')) {
+    try{
+      const r = await fetch(LVVERIFY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hash }) });
+      const d = await r.json();
+      if (d.ok === true){
+        setLv(step); // alleen op TRUE → geen bypass
+      }
+    }catch(_){}
+    // maak URL schoon
+    history.replaceState({}, '', SITE + (hwid? ('/?hwid='+encodeURIComponent(hwid)) : '/'));
+  }
   refresh();
-}
+})();
 
+// Init: toon bestaande key (of haal terug vanaf server)
+(async function init(){
+  const local = getActive(); if (local) renderKeyCard(local);
+  refresh();
+})();
+
+// START → open juiste Linkvertise stap
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  window.open(s1 ? STEP2 : STEP1, '_blank');
+  const target = (s1 ? STEP2_URL : STEP1_URL);
+  window.open(target, '_blank');
 };
 
+// Get Key (via Apps Script → keyproxy)
 document.getElementById('btnGet').onclick = async () => {
-  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):');
-  if (!hwid) return;
+  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
   try{
     document.getElementById('btnGet').disabled=true;
-    const r = await fetch(PROXY,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'request_key', hwid, turnstileToken: token })
-    });
+    const r = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'request_key', hwid, turnstileToken }) });
     const d = await r.json();
-    if(d.ok && d.key){
-      const k={key:d.key,expiresAt:d.expiresAt};
-      setActive(k); renderKeyCard(k); refresh();
-    } else {
-      alert('Error: '+(d.error||'unknown'));
-    }
-  }catch(e){
-    alert('Network error');
-  }finally{
-    document.getElementById('btnGet').disabled=false;
-  }
+    if (d.ok && d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
+    else alert('Error: '+(d.error||'unknown'));
+  } finally { document.getElementById('btnGet').disabled=false; }
 };
 
-init();
+// DEV quick key (zelfde site)
+document.getElementById('btnDev').onclick = async () => {
+  const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?'); if(!hwid) return;
+  try{
+    document.getElementById('btnDev').disabled=true;
+    const r = await fetch('/.netlify/functions/dev-issue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hwid }) });
+    const d = await r.json();
+    if (d.ok && d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
+    else alert('Dev error: '+(d.error||'unknown'));
+  } finally { document.getElementById('btnDev').disabled=false; }
+};
 </script>
 </body>
 </html>
