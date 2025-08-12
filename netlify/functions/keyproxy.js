@@ -1,4 +1,4 @@
-// netlify/functions/keyproxy.js — handles base64 bodies + JSON/form
+// keyproxy.js — base64-safe + JSON/form fallback + logging
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return resp(200, {});
   if (event.httpMethod !== 'POST')   return resp(405, { ok:false, error:'method_not_allowed' });
@@ -7,50 +7,51 @@ exports.handler = async (event) => {
     const APPS_EXEC = process.env.APPS_EXEC;
     if (!APPS_EXEC) return resp(500, { ok:false, error:'missing_APPS_EXEC' });
 
-    // Decode body if Netlify marked it as base64 (happens with some executors)
+    const headers = event.headers || {};
+    const ct = (headers['content-type'] || headers['Content-Type'] || '').toLowerCase();
+
+    // --- body decode (base64-aware) ---
     const isB64 = !!event.isBase64Encoded;
     let raw = event.body || '';
     if (isB64) {
-      raw = Buffer.from(raw, 'base64').toString('utf8');
+      try { raw = Buffer.from(raw, 'base64').toString('utf8'); }
+      catch { /* ignore; keep raw */ }
     }
 
-    const h  = event.headers || {};
-    const ct = (h['content-type'] || h['Content-Type'] || '').toLowerCase();
-
+    // --- parse payload ---
     let payload = {};
     if (ct.includes('application/x-www-form-urlencoded')) {
       payload = parseForm(raw);
     } else {
-      try {
-        payload = JSON.parse(raw || '{}');
-      } catch {
-        // Some executors lie about content-type → fallback parse as form
-        payload = parseForm(raw);
-      }
+      try { payload = JSON.parse(raw || '{}'); }
+      catch { payload = parseForm(raw); } // sommige executors liegen over Content-Type
     }
 
-    // Forward to Apps Script as JSON
+    // Debug in Netlify logs
+    console.log(`[keyproxy] ct=${ct} isB64=${isB64} len=${(raw||'').length} action=${payload.action || ''}`);
+
+    // --- forward naar Apps Script (als JSON) ---
     const r = await fetch(APPS_EXEC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    const text = await r.text();
-    // passthrough: keep exact JSON body from Apps Script
+    const text = await r.text(); // Apps Script geeft al JSON
     return resp(r.ok ? 200 : 500, text, true);
   } catch (e) {
+    console.error('[keyproxy] error:', e);
     return resp(500, { ok:false, error:String(e) });
   }
 };
 
 function parseForm(body){
   const out = {};
-  for (const part of String(body).split('&')){
-    if (!part) continue;
-    const [k,v=''] = part.split('=');
+  String(body || '').split('&').forEach(part => {
+    if (!part) return;
+    const [k, v=''] = part.split('=');
     out[decodeURIComponent(k.replace(/\+/g,' '))] = decodeURIComponent(v.replace(/\+/g,' '));
-  }
+  });
   return out;
 }
 
