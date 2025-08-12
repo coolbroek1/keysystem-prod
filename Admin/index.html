@@ -1,93 +1,145 @@
 <!doctype html>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Admin</title>
-<style>
-  :root{ --bg:#0b1220; --card:#131b2c; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --blue:#3a56f0; --red:#ff5c6c; --green:#1aaf66;}
-  body{margin:0;font-family:Inter,system-ui,Arial;background:#0b1220;color:var(--text)}
-  .wrap{max-width:900px;margin:40px auto;padding:0 16px}
-  .card{background:var(--card);border-radius:16px;padding:16px 16px 20px;border:1px solid var(--line)}
-  h1{margin:0 0 12px 0;font-size:20px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
-  input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;font-weight:600}
-  input{min-width:280px}
-  button{cursor:pointer}
-  .blue{background:var(--blue);border-color:var(--blue)}
-  .red{background:var(--red);border-color:var(--red)}
-  .green{background:var(--green);border-color:var(--green)}
-  .muted{color:var(--muted);font-size:12px}
-  pre{background:#0f1726;color:#e8ecf4;padding:10px;border-radius:10px;overflow:auto}
-  .hidden{display:none}
-</style>
-<div class="wrap">
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin</title>
+  <style>
+    body{margin:0;font-family:Inter,system-ui,Arial;background:#0b1220;color:#e8ecf4}
+    .wrap{max-width:900px;margin:60px auto;padding:0 20px}
+    .card{background:#131b2c;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);overflow:hidden}
+    .head{padding:18px 22px;background:#121a2b;font-weight:700}
+    .row{padding:20px;border-top:1px solid #1e2a44}
+    .grid{display:grid;grid-template-columns:160px 1fr auto;gap:10px;align-items:center}
+    input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;font-size:14px}
+    button{cursor:pointer;background:#3a56f0}
+    button.green{background:#1aaf66}
+    button.red{background:#c24141}
+    code{background:#0f1726;padding:6px 8px;border-radius:8px}
+    .muted{color:#9aa3b2}
+    #login{max-width:420px;margin:60px auto}
+  </style>
+</head>
+<body>
+<div id="login" class="wrap" style="display:none">
   <div class="card">
-    <h1>Admin</h1>
-    <div id="gate">
-      <div class="row">
-        <input id="pw" placeholder="Password" type="password" />
-        <button id="btnEnter" class="blue">Enter</button>
+    <div class="head">Admin login</div>
+    <div class="row">
+      <div class="grid">
+        <label>Wachtwoord</label>
+        <input id="pw" type="password" placeholder="••••" />
+        <button id="btnLogin">Login</button>
       </div>
-      <div class="muted">Password = <code>aze</code> (verander later!).</div>
+      <div class="muted" style="margin-top:10px">Voor nu: <b>aze</b></div>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <div class="card">
+    <div class="head">Key Admin</div>
+
+    <div class="row grid">
+      <label>HWID</label>
+      <input id="hwid" placeholder="B1532DAA-03EE-42B8-AAEE-905CDCBE7B02" />
+      <span></span>
     </div>
 
-    <div id="panel" class="hidden">
-      <div class="row">
-        <input id="hwid" placeholder="HWID (with dashes)" />
-        <button id="btnIssue" class="green">Issue Key</button>
-        <button id="btnLookup" class="blue">Lookup</button>
-        <button id="btnReset" class="red">Reset HWID</button>
-      </div>
+    <div class="row grid">
+      <label>Lookup active</label>
+      <button id="btnLookup">Lookup</button>
+      <span id="lkOut" class="muted"></span>
+    </div>
 
-      <div class="row">
-        <input id="key" placeholder="Specific key (optional)" />
-        <button id="btnDeleteKey" class="red">Delete Key</button>
-      </div>
+    <div class="row grid">
+      <label>Issue new key</label>
+      <button class="green" id="btnIssue">Issue</button>
+      <span id="ikOut" class="muted"></span>
+    </div>
 
-      <div class="row">
-        <button id="btnLogout">Logout</button>
-      </div>
+    <div class="row grid">
+      <label>Reset HWID</label>
+      <button class="red" id="btnReset">Reset</button>
+      <span id="rsOut" class="muted"></span>
+    </div>
 
-      <div class="row">
-        <pre id="out">Ready.</pre>
-      </div>
+    <div class="row">
+      <div class="muted">Tip: Forceer client refresh: <code>/?reset=1&amp;hwid=&lt;HWID&gt;</code></div>
     </div>
   </div>
 </div>
 
 <script>
-const ADMIN_PASS = "aze"; // UI-gate. Echte serversecret zit in Netlify env.
-const FN = "/.netlify/functions/admin";
+const PROXY    = "/.netlify/functions/keyproxy";
+const DEVISSUE = "/.netlify/functions/dev-issue";
+const ADMIN_PW = "aze";
 
-const $ = (id)=>document.getElementById(id);
-const out = $("out");
-function log(x){ out.textContent = typeof x==="string"? x : JSON.stringify(x,null,2); }
+const fmtBE = (ms) =>
+  new Intl.DateTimeFormat('nl-BE', {
+    timeZone: 'Europe/Brussels',
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12:false
+  }).format(new Date(ms));
 
-function authed(v){ localStorage.setItem("admin_ok", v?"1":"0"); $("gate").classList.toggle("hidden",v); $("panel").classList.toggle("hidden",!v); }
-authed(localStorage.getItem("admin_ok")==="1");
+function $(id){ return document.getElementById(id); }
 
-$("btnEnter").onclick = ()=>{ if($("pw").value===ADMIN_PASS) authed(true); else alert("Wrong password"); };
-$("btnLogout").onclick = ()=>{ authed(false); };
-
-async function call(op, payload){
-  try{
-    const r = await fetch(FN, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ op, ...payload }) });
-    const t = await r.text(); let d; try{ d=JSON.parse(t); }catch{ d={ ok:false, raw:t }; }
-    return d;
-  }catch(e){ return { ok:false, error:String(e) }; }
+function showApp(v){
+  $('login').style.display = v ? 'none':'block';
+  $('app').style.display   = v ? 'block':'none';
 }
+(function boot(){
+  const ok = sessionStorage.getItem('adm_ok')==='1';
+  showApp(ok);
+})();
 
-$("btnIssue").onclick = async ()=>{ const hwid=$("hwid").value.trim(); if(!hwid) return alert("Enter HWID");
-  log("Issuing..."); const d = await call("issue", { hwid }); log(d);
+$('btnLogin').onclick = ()=>{
+  if ($('pw').value === ADMIN_PW){
+    sessionStorage.setItem('adm_ok','1'); showApp(true);
+  } else { alert('Fout wachtwoord'); }
 };
-$("btnLookup").onclick = async ()=>{ const hwid=$("hwid").value.trim(); if(!hwid) return alert("Enter HWID");
-  log("Looking up..."); const d = await call("lookup_hwid", { hwid }); log(d);
+
+$('btnLookup').onclick = async ()=>{
+  const hwid = $('hwid').value.trim(); if(!hwid) return;
+  $('lkOut').textContent = 'Bezig...';
+  try{
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid})});
+    const d = await r.json();
+    if (d.ok){
+      $('lkOut').innerHTML = `Key: <code>${d.key}</code> &nbsp; Expires: <b>${fmtBE(d.expiresAt)}</b>`;
+    } else {
+      $('lkOut').textContent = d.error || 'not_found';
+    }
+  }catch(e){ $('lkOut').textContent = String(e); }
 };
-$("btnReset").onclick = async ()=>{ const hwid=$("hwid").value.trim(); if(!hwid) return alert("Enter HWID");
-  if(!confirm("Reset ALL keys for this HWID?")) return;
-  log("Resetting..."); const d = await call("reset_hwid", { hwid }); log(d);
+
+$('btnIssue').onclick = async ()=>{
+  const hwid = $('hwid').value.trim(); if(!hwid) return;
+  $('ikOut').textContent = 'Bezig key uitgeven...';
+  try{
+    const r = await fetch(DEVISSUE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ hwid })});
+    const d = await r.json();
+    if (d.ok){
+      $('ikOut').innerHTML = `Nieuwe key: <code>${d.key}</code> &nbsp; Expires: <b>${fmtBE(d.expiresAt)}</b>`;
+    } else {
+      $('ikOut').textContent = d.error || 'error';
+    }
+  }catch(e){ $('ikOut').textContent = String(e); }
 };
-$("btnDeleteKey").onclick = async ()=>{ const key=$("key").value.trim(); if(!key) return alert("Enter key");
-  if(!confirm("Delete this key?")) return;
-  log("Deleting key..."); const d = await call("delete_key", { key }); log(d);
+
+$('btnReset').onclick = async ()=>{
+  const hwid = $('hwid').value.trim(); if(!hwid) return;
+  $('rsOut').textContent = 'Bezig reset...';
+  try{
+    // server-side reset (Apps Script) via keyproxy
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid', adminSecret:'aze', hwid})});
+    const d = await r.json();
+    if (d.ok){
+      $('rsOut').innerHTML = `OK — verwijderde keys: <b>${d.deleted||0}</b>. <a href="/?reset=1&hwid=${encodeURIComponent(hwid)}" target="_blank">Open client (force reset)</a>`;
+    } else {
+      $('rsOut').textContent = d.error || 'error';
+    }
+  }catch(e){ $('rsOut').textContent = String(e); }
 };
 </script>
+</body>
+</html>
