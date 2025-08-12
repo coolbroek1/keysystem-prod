@@ -1,8 +1,44 @@
 <!doctype html><meta charset="utf-8">
+<title>Verifying…</title>
+<style>
+  body{margin:0;font-family:Inter,system-ui,Arial;background:#0b1220;color:#e8ecf4;display:grid;place-items:center;height:100svh}
+  .card{background:#131b2c;border-radius:14px;padding:22px;max-width:560px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .muted{color:#9aa3b2}
+</style>
+<div class="card">
+  <div id="msg">Verifying step 1…</div>
+  <div class="muted" id="sub"></div>
+</div>
 <script>
-try{ localStorage.setItem('lv1','1'); }catch(e){}
-const u = new URL(location.href);
-const hwid = u.searchParams.get('hwid');
-location.replace('/' + (hwid ? ('?hwid='+encodeURIComponent(hwid)) : ''));
+(async function(){
+  const u  = new URL(location.href);
+  const hw = u.searchParams.get('hwid') || '';
+  const h  = u.searchParams.get('hash') || '';
+
+  if (!h || h.length !== 64){
+    document.getElementById('msg').textContent = 'Missing Linkvertise hash.';
+    document.getElementById('sub').textContent = 'Open the Link again from the portal.';
+    return;
+  }
+
+  try {
+    const r = await fetch('/.netlify/functions/verify-step', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ hash: h })
+    });
+    const d = await r.json();
+    if (d.ok && d.valid){
+      try{ localStorage.setItem('lv1','1'); }catch(_){}
+      // Keep HWID if provided
+      const qs = hw ? ('?hwid='+encodeURIComponent(hw)) : '';
+      location.replace('/'+qs);
+    } else {
+      document.getElementById('msg').textContent = 'Verification failed (step 1).';
+      document.getElementById('sub').textContent = (d.error || d.reason || 'Try again from the portal.');
+    }
+  } catch(e){
+    document.getElementById('msg').textContent = 'Network error.';
+    document.getElementById('sub').textContent = String(e);
+  }
+})();
 </script>
-<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Step 1 done…</body>
