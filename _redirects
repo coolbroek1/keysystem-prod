@@ -1,1 +1,3 @@
-/* /index.html 200
+/Admin/*   /Admin/index.html 200
+/lv/*      /lv/:splat       200
+/*         /index.html      200
