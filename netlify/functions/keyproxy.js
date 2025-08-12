@@ -1,47 +1,52 @@
-// netlify/functions/keyproxy.js — robust: JSON + FORM + GET fallback
+// netlify/functions/keyproxy.js — hardened: JSON + FORM + GET + empty-body ignore
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return resp(200, {});
   const APPS_EXEC = process.env.APPS_EXEC;
   if (!APPS_EXEC) return resp(500, { ok:false, error:'missing_APPS_EXEC' });
 
-  const h = event.headers || {};
+  const h  = event.headers || {};
   const ct = (h['content-type'] || h['Content-Type'] || '').toLowerCase();
+  const qs = event.queryStringParameters || {};
+  const bodyStr = event.body || '';
 
   let payload = {};
   let src = 'none';
 
   try {
     if (event.httpMethod === 'GET') {
-      payload = event.queryStringParameters || {};
-      src = 'qs';
+      payload = qs; src = 'qs';
     } else if (ct.includes('application/json')) {
-      payload = JSON.parse(event.body || '{}');
-      src = 'json';
+      payload = JSON.parse(bodyStr || '{}'); src = 'json';
     } else if (ct.includes('application/x-www-form-urlencoded')) {
-      payload = parseForm(event.body || '');
-      src = (event.body && event.body.length > 0) ? 'form' : 'form-empty';
+      payload = parseForm(bodyStr || ''); src = (bodyStr && bodyStr.length > 0) ? 'form' : 'form-empty';
     } else {
-      // probeer JSON alsnog
-      payload = JSON.parse(event.body || '{}');
-      src = 'unknown';
+      // probeer eerst JSON, anders FORM
+      try { payload = JSON.parse(bodyStr || '{}'); src = 'unknown-json'; }
+      catch { payload = parseForm(bodyStr || ''); src = 'unknown-form'; }
     }
-  } catch (_) {
-    payload = {};
-    src = 'parse-error';
+  } catch {
+    payload = {}; src = 'parse-error';
   }
 
-  const len = (event.body || '').length;
+  const len    = bodyStr.length;
   const action = payload.action || 'undefined';
-  console.log(`[keyproxy] m=${event.httpMethod} ct=${ct} len=${len} src=${src} action=${action}`);
+  const ua     = h['user-agent'] || '';
+  const ip     = h['x-nf-client-connection-ip'] || h['client-ip'] || '';
+  console.log(`[keyproxy] m=${event.httpMethod} ct=${ct} len=${len} src=${src} action=${action} ip=${ip} ua=${ua.slice(0,60)}`);
 
-  // Extra fallback: sommige clients zetten body leeg maar parameters in de URL
+  // Fallback: als body leeg is maar er staat wel iets in de URL, gebruik dat
   if ((!payload || Object.keys(payload).length === 0 || action === 'undefined')
-      && event.queryStringParameters && Object.keys(event.queryStringParameters).length) {
-    payload = event.queryStringParameters;
+      && qs && Object.keys(qs).length) {
+    payload = qs;
   }
 
-  if (!payload.action) {
-    return resp(200, { ok:false, error:'unknown_action' });
+  // Nog steeds niets bruikbaars? Gewoon negeren (geen error-spam meer).
+  if (!payload || !payload.action) {
+    return {
+      statusCode: 204,
+      headers: cors(),
+      body: '' // 204 heeft geen body
+    };
   }
 
   try {
@@ -68,15 +73,15 @@ function parseForm(body){
   return out;
 }
 
-function resp(status, body, passthrough=false){
+function cors(){
   return {
-    statusCode: status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    },
-    body: passthrough ? body : JSON.stringify(body),
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
   };
+}
+
+function resp(status, body, passthrough=false){
+  return { statusCode: status, headers: cors(), body: passthrough ? body : JSON.stringify(body) };
 }
