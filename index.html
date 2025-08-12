@@ -1,73 +1,144 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Key</title>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <style>
+    :root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh}
+    .wrap{max-width:1080px; margin:80px auto; padding:0 20px}
+    .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden}
+    .card-top{padding:24px; background:var(--cardTop); display:flex; align-items:center; gap:16px; justify-content:space-between}
+    .title{font-weight:700; font-size:20px}
+    .right{display:flex; align-items:center; gap:20px}
+    .muted{color:var(--muted); font-size:14px}
+    .row{padding:22px; border-top:1px solid var(--line)}
+    .bar{height:6px; background:#0f1726; border-radius:999px; overflow:hidden}
+    .bar>span{display:block; height:100%; width:0%; background:var(--accent)}
+    .btn{padding:10px 16px; border-radius:10px; border:1px solid #2a3553; cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600}
+    .btn.green{background:var(--green); border-color:var(--green); color:#fff}
+    .btn.blue{background:var(--blue); border-color:var(--blue); color:#fff}
+    .btn[disabled]{opacity:.5; cursor:not-allowed}
+    .key{font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726; border-radius:10px; display:inline-block}
+    .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
+    .hint{font-size:12px; color:var(--muted)}
+    .flex{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-top">
+        <div class="title">Key</div>
+        <div class="right">
+          <div class="muted">
+            Progress: <span id="progLabel">0/2</span>
+            <div class="bar"><span id="progBar"></span></div>
+          </div>
+          <button id="btnStart" class="btn green">⎘ START</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div id="keyRow" class="muted">Nog geen key. Rond beide stappen af en klik <b>Get Key</b>.</div>
+      </div>
+
+      <div class="row">
+        <div class="flex">
+          <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
+          <button id="btnGet" class="btn blue" disabled>Get Key</button>
+          <div class="hint" id="hint"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 <script>
 const PROXY = "/.netlify/functions/keyproxy";
-const DEVISSUE = "/.netlify/functions/dev-issue";
 const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
 const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
 let token = null;
 window.onTurnstile = t => { token = t; refresh(); };
 
-// flags
+// progress flags
 function setLv(n){ localStorage.setItem('lv'+n,'1'); }
 function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
 function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
 
-// capture ?lv & ?hwid & ?reset
+// capture ?lv / ?hwid / ?reset
 (function(){
   const u = new URL(location.href);
-  const lv=u.searchParams.get('lv'); const reset=u.searchParams.get('reset'); const hwid=u.searchParams.get('hwid');
+  const lv = u.searchParams.get('lv');
+  const hwid = u.searchParams.get('hwid');
+  const reset = u.searchParams.get('reset');
   if (lv==='1') setLv(1); if (lv==='2') setLv(2);
   if (hwid) localStorage.setItem('hwid', hwid);
-  if (reset==='1'){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); clearLv(); }
-  if (lv || hwid || reset) history.replaceState({},'', '/');
+  if (reset==='1'){ setActive(null); clearLv(); }
+  if (lv || hwid || reset) history.replaceState({}, '', '/');
 })();
 
+// key cache
 function getActive(){
-  const k = localStorage.getItem('activeKey'); const e = Number(localStorage.getItem('activeKeyExp')||0);
-  if (!k||!e||Date.now()>e) return null; return {key:k,expiresAt:e};
+  const k = localStorage.getItem('activeKey');
+  const e = Number(localStorage.getItem('activeKeyExp')||0);
+  if (!k || !e || Date.now()>e) return null;
+  return { key:k, expiresAt:e };
 }
 function setActive(k){
   if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
   localStorage.setItem('activeKey', k.key);
   localStorage.setItem('activeKeyExp', String(k.expiresAt));
 }
-function fmtLeft(exp){ const ms=Math.max(0,exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
+
+// render helpers
+function fmtLeft(exp){
+  const ms = Math.max(0, exp-Date.now());
+  const h = Math.floor(ms/3.6e6), m = Math.floor((ms%3.6e6)/6e4);
+  return `${h}h ${m}m`;
+}
 function renderKeyCard(k){
-  const row=document.getElementById('keyRow');
+  const row = document.getElementById('keyRow');
   if(!k){ row.innerHTML='Nog geen key. Rond beide stappen af en klik <b>Get Key</b>.'; return; }
-  row.innerHTML=`<span class="key">${k.key}</span><span class="pill">Active · ${fmtLeft(k.expiresAt)} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
-  document.getElementById('copyBtn').onclick=()=>navigator.clipboard.writeText(k.key);
+  row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${fmtLeft(k.expiresAt)} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
+  document.getElementById('copyBtn').onclick = ()=>navigator.clipboard.writeText(k.key);
 }
 
-// extra: ALTIJD met server synchroniseren
+// server sync
 async function syncWithServer(){
   const hwid = localStorage.getItem('hwid'); if(!hwid) return;
   try{
     const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid})});
     const d = await r.json();
     if (d.ok && d.key){
-      const local = getActive();
-      if (!local || local.key!==d.key || local.expiresAt!==d.expiresAt){
-        const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k);
-      }
+      const k={key:d.key, expiresAt:d.expiresAt};
+      setActive(k); renderKeyCard(k);
     } else {
-      // server zegt: geen geldige key -> wis lokale cache + progress
       setActive(null); clearLv(); renderKeyCard(null);
     }
   }catch(_){}
 }
 
 function refresh(){
-  const {s1,s2}=flags(); const prog=(s1 and 1 or 0)+(s2 and 1 or 0);
-  document.getElementById('progLabel').textContent = `${(s1?1:0)+(s2?1:0)}/2`;
-  document.getElementById('progBar').style.width = `${(((s1 and 1 or 0)+(s2 and 1 or 0))/2)*100}%`;
+  const {s1,s2} = flags();
+  const prog = (s1?1:0)+(s2?1:0);
+  document.getElementById('progLabel').textContent = `${prog}/2`;
+  document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
   const hasActive = !!getActive();
-  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&!!token);
-  document.getElementById('hint').textContent = !hasActive && !(s1&&s2) ? 'Voltooi beide stappen; als je terugkomt via /lv/1 en /lv/2 wordt dit automatisch 2/2.' : '';
+  document.getElementById('btnGet').disabled = hasActive || !(s1 && s2 && !!token);
+  document.getElementById('hint').textContent = !hasActive && !(s1&&s2) ? 'Voltooi beide stappen; terugkeer via /lv/1 en /lv/2 telt automatisch mee.' : '';
 }
 
-document.getElementById('btnStart').onclick = () => { const {s1,s2}=flags(); window.open(s1?STEP2:STEP1,'_blank'); };
+// open juiste Linkvertise stap
+document.getElementById('btnStart').onclick = () => {
+  const { s1, s2 } = flags();
+  window.open(s1 ? STEP2 : STEP1, '_blank');
+};
 
+// key aanvragen
 document.getElementById('btnGet').onclick = async () => {
   const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
   try{
@@ -79,10 +150,11 @@ document.getElementById('btnGet').onclick = async () => {
   } finally { document.getElementById('btnGet').disabled=false; }
 };
 
-// DEV (optioneel): blijft zoals jij ‘m hebt of via /Admin gebruiken
-
-// init: eerst render wat we hebben, daarna ALTIJD sync met server
+// init
 (function init(){
-  const local = getActive(); renderKeyCard(local); refresh(); syncWithServer();
+  const local = getActive(); renderKeyCard(local);
+  refresh(); syncWithServer();
 })();
 </script>
+</body>
+</html>
