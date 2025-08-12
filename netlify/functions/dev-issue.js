@@ -21,7 +21,9 @@ exports.handler = async (event) => {
     });
     const text = await r.text();
     return cors(r.ok ? 200 : 500, text, true);
-  } catch (e) { return cors(500, { ok:false, error:String(e) }); }
+  } catch (e) {
+    return cors(500, { ok:false, error:String(e) });
+  }
 };
 
 function cors(status, body, passthrough=false) {
