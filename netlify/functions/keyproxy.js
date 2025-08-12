@@ -1,5 +1,3 @@
-// Accept POST (json or form), and if body is empty also accept querystring.
-// Also allow GET for quick debugging.
 exports.handler = async (event) => {
   const method = (event.httpMethod || 'POST').toUpperCase();
   if (method === 'OPTIONS') return resp(200, {});
@@ -19,7 +17,7 @@ exports.handler = async (event) => {
         try { payload = JSON.parse(raw); } catch { payload = {}; }
       }
     }
-    // Fallback: querystring
+    // Fallback: querystring (voor executors die body strippen)
     if (!payload.action) {
       const q = event.queryStringParameters || {};
       if (q && (q.action || q.hwid || q.key)) payload = q;
@@ -27,13 +25,11 @@ exports.handler = async (event) => {
 
     console.log(`[keyproxy] m=${method} ct=${ct} len=${raw.length} action=${payload.action||'undefined'}`);
 
-    // Forward to Apps Script
     const r = await fetch(APPS_EXEC, {
       method: 'POST',
       headers: { 'Content-Type':'application/json' },
       body: JSON.stringify(payload),
     });
-
     const text = await r.text();
     console.log(`[keyproxy] RESP ${r.status} ${text.slice(0,200)}`);
     return resp(r.ok ? 200 : 500, text, true);
@@ -52,7 +48,6 @@ function parseForm(body){
   }
   return out;
 }
-
 function resp(status, body, passthrough=false){
   return {
     statusCode: status,
