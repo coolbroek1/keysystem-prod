@@ -1,20 +1,35 @@
+// netlify/functions/keyproxy.js — handles base64 bodies + JSON/form
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return resp(200, {});
-  if (event.httpMethod !== 'POST') return resp(405, { ok:false, error:'method_not_allowed' });
+  if (event.httpMethod !== 'POST')   return resp(405, { ok:false, error:'method_not_allowed' });
+
   try {
     const APPS_EXEC = process.env.APPS_EXEC;
     if (!APPS_EXEC) return resp(500, { ok:false, error:'missing_APPS_EXEC' });
 
-    const h = event.headers || {};
+    // Decode body if Netlify marked it as base64 (happens with some executors)
+    const isB64 = !!event.isBase64Encoded;
+    let raw = event.body || '';
+    if (isB64) {
+      raw = Buffer.from(raw, 'base64').toString('utf8');
+    }
+
+    const h  = event.headers || {};
     const ct = (h['content-type'] || h['Content-Type'] || '').toLowerCase();
 
     let payload = {};
     if (ct.includes('application/x-www-form-urlencoded')) {
-      payload = parseForm(event.body || '');
+      payload = parseForm(raw);
     } else {
-      payload = JSON.parse(event.body || '{}');
+      try {
+        payload = JSON.parse(raw || '{}');
+      } catch {
+        // Some executors lie about content-type → fallback parse as form
+        payload = parseForm(raw);
+      }
     }
 
+    // Forward to Apps Script as JSON
     const r = await fetch(APPS_EXEC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -22,6 +37,7 @@ exports.handler = async (event) => {
     });
 
     const text = await r.text();
+    // passthrough: keep exact JSON body from Apps Script
     return resp(r.ok ? 200 : 500, text, true);
   } catch (e) {
     return resp(500, { ok:false, error:String(e) });
@@ -30,7 +46,7 @@ exports.handler = async (event) => {
 
 function parseForm(body){
   const out = {};
-  for (const part of body.split('&')){
+  for (const part of String(body).split('&')){
     if (!part) continue;
     const [k,v=''] = part.split('=');
     out[decodeURIComponent(k.replace(/\+/g,' '))] = decodeURIComponent(v.replace(/\+/g,' '));
