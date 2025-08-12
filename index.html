@@ -1,175 +1,240 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Key • by Ezyscript❤️</title>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<style>
-  :root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
-  *{box-sizing:border-box}
-  body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh}
-  .wrap{max-width:1080px; margin:80px auto; padding:0 20px}
-  .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden}
-  .card-top{padding:24px; background:var(--cardTop); display:flex; align-items:center; gap:16px; justify-content:space-between}
-  .title{font-weight:700; font-size:20px}
-  .right{display:flex; align-items:center; gap:20px}
-  .muted{color:var(--muted); font-size:14px}
-
-  .bar{height:6px; background:#0f1726; border-radius:999px; overflow:hidden}
-  .bar>span{display:block; height:100%; width:0%; background:var(--accent)}
-  .footer{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px; border-top:1px solid var(--line)}
-  .btn{padding:10px 16px; border-radius:10px; border:1px solid #2a3553; cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600}
-  .btn.green{background:var(--green); border-color:var(--green); color:#fff}
-  .btn.blue{background:var(--blue); border-color:var(--blue); color:#fff}
-  .btn[disabled]{opacity:.5; cursor:not-allowed}
-  .keycard{padding:22px;}
-  .key{font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726; border-radius:10px; display:inline-block}
-  .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
-  .hint{font-size:12px; color:var(--muted)}
-
-  /* link box: single-line, horizontal scroll */
-  .linkwrap{max-width:520px; background:#0f1726; border-radius:10px; border:1px solid #2a3553; overflow:auto; white-space:nowrap; padding:8px 10px; font:14px/1.4 ui-monospace,Menlo,Consolas}
-  .linkwrap::-webkit-scrollbar{height:8px}
-  .linkwrap::-webkit-scrollbar-thumb{background:#26314f; border-radius:999px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Key Portal</title>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <style>
+    :root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh}
+    .wrap{max-width:1080px; margin:80px auto; padding:0 18px}
+    .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden}
+    .head{padding:20px 22px; background:var(--cardTop); display:flex; align-items:center; justify-content:space-between; gap:12px}
+    h1{font-size:18px; margin:0}
+    .muted{color:var(--muted); font-size:13px}
+    .keyrow{padding:22px}
+    .key{font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726; border-radius:10px; display:inline-block; word-break:break-all}
+    .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
+    .barwrap{display:flex; align-items:center; gap:16px}
+    .barlbl{min-width:70px}
+    .bar{height:6px; width:180px; background:#0f1726; border-radius:999px; overflow:hidden}
+    .bar>span{display:block; height:100%; width:0%; background:var(--accent)}
+    .footer{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px; border-top:1px solid var(--line); flex-wrap:wrap}
+    .btn{padding:10px 16px; border-radius:10px; border:1px solid #2a3553; cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600}
+    .btn.green{background:var(--green); border-color:var(--green); color:#fff}
+    .btn.blue{background:var(--blue); border-color:var(--blue); color:#fff}
+    .btn[disabled]{opacity:.5; cursor:not-allowed}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .dev{display:none}
+    .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .hint{font-size:12px; color:var(--muted)}
+    .brand{font-size:12px; color:#8ad2ff}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="card-top">
-        <div class="title">Key</div>
-        <div class="right">
-          <div class="muted">Progress: <span id="progLabel">0/2</span>
+      <div class="head">
+        <div>
+          <h1>Key</h1>
+          <div class="barwrap">
+            <div class="muted barlbl">Progress: <span id="progLabel">0/2</span></div>
             <div class="bar"><span id="progBar"></span></div>
           </div>
-          <button id="btnStart" class="btn green">Get Key</button>
         </div>
+        <button id="btnStart" class="btn green">⎘ START</button>
       </div>
 
-      <div class="keycard">
-        <div id="keyRow" class="muted">No key yet. Complete both steps and click <b>Get Key</b>. <span class="hint">by Ezyscript❤️</span></div>
+      <div class="keyrow">
+        <div id="keyRow" class="muted">No key yet. Finish both steps and click <b>Get Key</b>.</div>
       </div>
 
       <div class="footer">
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
-          <div class="linkwrap" id="linkBox"></div>
+        <div class="row">
+          <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
           <button id="btnGet" class="btn blue" disabled>Get Key</button>
-          <div class="hint" id="hint"></div>
+          <div class="hint" id="hint">by Ezyscript❤️</div>
         </div>
-        <div id="devbar" style="display:flex; gap:10px; align-items:center">
+
+        <div id="devbar" class="dev">
           <input id="devHwid" placeholder="HWID" style="padding:8px 10px;border-radius:8px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;" />
           <button id="btnDev" class="btn">DEV: Quick Key</button>
+          <span class="hint">(Alt+D toggles this bar)</span>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-const PROXY     = "/.netlify/functions/keyproxy";
-const LVVERIFY  = "/.netlify/functions/lv-verify"; // <— nieuw
-const STEP1_URL = "https://link-hub.net/1380626/oXYyD2XlP2qW";
-const STEP2_URL = "https://link-hub.net/1380626/bouVTQdnXmmi";
-const SITE      = location.origin;
+/*** CONFIG ***/
+const PROXY = "/.netlify/functions/keyproxy";
+const DEVISSUE = "/.netlify/functions/dev-issue";
+const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
-let turnstileToken = null;
-window.onTurnstile = t => { turnstileToken = t; refresh(); };
+/*** STATE ***/
+let token = null;
+window.onTurnstile = t => { token = t; refresh(); };
 
-// progress helpers
-function setLv(n){ localStorage.setItem('lv'+n,'1'); }
-function flags(){ return { s1:localStorage.getItem('lv1')==='1', s2:localStorage.getItem('lv2')==='1' }; }
-
+/*** LOCAL STORAGE HELPERS ***/
+function setLv(n){ localStorage.setItem('lv'+n, '1'); }
+function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
+function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
 function getActive(){
   const k = localStorage.getItem('activeKey');
-  const e = Number(localStorage.getItem('activeKeyExp')||0);
+  const e = Number(localStorage.getItem('activeKeyExp') || 0);
   if (!k || !e || Date.now()>e) return null;
   return { key:k, expiresAt:e };
 }
-function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.removeItem('activeKeyExp');return;}
-  localStorage.setItem('activeKey', k.key); localStorage.setItem('activeKeyExp', String(k.expiresAt));
+function setActive(k){
+  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
+  localStorage.setItem('activeKey', k.key);
+  localStorage.setItem('activeKeyExp', String(k.expiresAt));
 }
+function clearAllLocal(){
+  setActive(null);
+  clearLv();
+  // bewaar hwid wél
+}
+
+/*** URL CAPTURE + PURGE ***/
+(function bootstrap(){
+  const url = new URL(location.href);
+  const hwid = url.searchParams.get('hwid');
+  const lvQ  = url.searchParams.get('lv');
+  const purge = url.searchParams.get('purge');
+
+  // accept /lv/1 and /lv/2 as well
+  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
+  if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
+
+  if (lvQ==='1') setLv(1);
+  if (lvQ==='2') setLv(2);
+  if (hwid) localStorage.setItem('hwid', hwid);
+  if (purge==='1'){ clearAllLocal(); }
+
+  if (hwid || lvQ || m || purge) {
+    history.replaceState({}, '', '/'); // pretty URL
+  }
+})();
+
+/*** DEV TOGGLE ***/
+window.addEventListener('keydown', (e)=>{
+  if (e.altKey && (e.key==='d' || e.key==='D')){
+    const v = localStorage.getItem('dev')==='1' ? '0' : '1';
+    localStorage.setItem('dev', v);
+    document.getElementById('devbar').classList.toggle('show', v==='1');
+  }
+});
+const qs = new URL(location.href).searchParams;
+if (qs.get('dev')==='1') localStorage.setItem('dev','1');
+document.getElementById('devbar').classList.toggle('show', localStorage.getItem('dev')==='1');
+
+/*** UI HELPERS ***/
 function fmtLeft(exp){ const ms = Math.max(0, exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
-function renderKeyCard(k){ const row=document.getElementById('keyRow'); if(!k){ row.innerHTML='No key yet. Complete both steps and click <b>Get Key</b>. <span class="hint">by Ezyscript❤️</span>'; return;} const left=fmtLeft(k.expiresAt); row.innerHTML=`<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span>`; }
-
-function hwidFromURL(){ return new URL(location.href).searchParams.get('hwid'); }
-
+function renderKeyCard(k){
+  const row=document.getElementById('keyRow');
+  if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
+  const left=fmtLeft(k.expiresAt);
+  row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
+  document.getElementById('copyBtn').onclick=()=>navigator.clipboard.writeText(k.key);
+}
 function refresh(){
-  const { s1,s2 } = flags(); const prog=(s1?1:0)+(s2?1:0);
+  const { s1,s2 } = flags();
+  const prog=(s1?1:0)+(s2?1:0);
   document.getElementById('progLabel').textContent = `${prog}/2`;
   document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
-
   const hasActive = !!getActive();
-  const cfOK = !!turnstileToken;
-  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOK);
-  document.getElementById('hint').textContent = hasActive ? '' : (!cfOK ? 'Complete the Turnstile box first' : '');
+  const cfOk = !!token;
+  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOk);
+  document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-// build visible link (scrollable)
-(function(){
-  const hwid = hwidFromURL() || localStorage.getItem('hwid') || '';
-  if (hwid) localStorage.setItem('hwid', hwid);
-  const url  = SITE + "/?hwid=" + encodeURIComponent(hwid || "");
-  document.getElementById('linkBox').textContent = url;
-})();
-
-// capture ?hash & ?step=1/2 → server verify
-(async function verifyLV(){
-  const u   = new URL(location.href);
-  const hash= u.searchParams.get('hash');
-  const step= u.searchParams.get('step'); // we zetten step=1 of 2 in je Linkvertise target
-  const hwid= u.searchParams.get('hwid');
-  if (hwid) localStorage.setItem('hwid', hwid);
-
-  if (hash && (step==='1' || step==='2')) {
-    try{
-      const r = await fetch(LVVERIFY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hash }) });
-      const d = await r.json();
-      if (d.ok === true){
-        setLv(step); // alleen op TRUE → geen bypass
+/*** SERVER SYNC — CRITICAL FIX ***/
+async function syncWithServer(){
+  const hwid = localStorage.getItem('hwid');
+  if (!hwid) return;
+  try{
+    const r = await fetch(PROXY,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'lookup_active_key', hwid })
+    });
+    const d = await r.json();
+    if (d.ok && d.key){
+      const local = getActive();
+      if (!local || local.key !== d.key || local.expiresAt !== d.expiresAt){
+        // server knows a (new) valid key → update local
+        const k = { key:d.key, expiresAt:d.expiresAt };
+        setActive(k); renderKeyCard(k);
       }
-    }catch(_){}
-    // maak URL schoon
-    history.replaceState({}, '', SITE + (hwid? ('/?hwid='+encodeURIComponent(hwid)) : '/'));
-  }
-  refresh();
-})();
+    } else {
+      // server has no valid key for this HWID → force fresh start
+      clearAllLocal();
+      renderKeyCard(null);
+    }
+    refresh();
+  }catch(_){}
+}
 
-// Init: toon bestaande key (of haal terug vanaf server)
-(async function init(){
-  const local = getActive(); if (local) renderKeyCard(local);
+/*** INIT ***/
+async function init(){
+  const local = getActive();
+  if (local) renderKeyCard(local);
   refresh();
-})();
+  // always reconcile with server (fixes "still 2/2 + old key" after resets)
+  await syncWithServer();
+}
+init();
 
-// START → open juiste Linkvertise stap
+/*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  const target = (s1 ? STEP2_URL : STEP1_URL);
-  window.open(target, '_blank');
+  window.open(s1 ? STEP2 : STEP1, '_blank');
 };
 
-// Get Key (via Apps Script → keyproxy)
 document.getElementById('btnGet').onclick = async () => {
   const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
   try{
     document.getElementById('btnGet').disabled=true;
-    const r = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'request_key', hwid, turnstileToken }) });
+    const r = await fetch(PROXY,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'request_key', hwid, turnstileToken: token })
+    });
     const d = await r.json();
-    if (d.ok && d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
-    else alert('Error: '+(d.error||'unknown'));
-  } finally { document.getElementById('btnGet').disabled=false; }
+    if(d.ok&&d.key){
+      const k={key:d.key, expiresAt:d.expiresAt};
+      setActive(k); renderKeyCard(k); refresh();
+    } else {
+      alert('Error: '+(d.error||'unknown'));
+      // just in case server says expired/not_found/superseded: wipe local
+      if (d && d.error && d.error !== 'turnstile_failed') { clearAllLocal(); refresh(); }
+    }
+  } finally {
+    document.getElementById('btnGet').disabled=false;
+  }
 };
 
-// DEV quick key (zelfde site)
-document.getElementById('btnDev').onclick = async () => {
-  const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?'); if(!hwid) return;
+// DEV quick key on same site (uses Netlify function with ADMIN_SECRET)
+const btnDev = document.getElementById('btnDev');
+btnDev && (btnDev.onclick = async () => {
+  const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?');
+  if(!hwid) return;
   try{
-    document.getElementById('btnDev').disabled=true;
-    const r = await fetch('/.netlify/functions/dev-issue', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hwid }) });
+    btnDev.disabled=true;
+    const r = await fetch(DEVISSUE, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hwid }) });
     const d = await r.json();
-    if (d.ok && d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
-    else alert('Dev error: '+(d.error||'unknown'));
-  } finally { document.getElementById('btnDev').disabled=false; }
-};
+    if (d.ok && d.key){
+      const k={key:d.key, expiresAt:d.expiresAt};
+      setActive(k); renderKeyCard(k); refresh();
+    } else {
+      alert('Dev error: '+(d.error||'unknown'));
+    }
+  } finally { btnDev.disabled=false; }
+});
 </script>
 </body>
 </html>
