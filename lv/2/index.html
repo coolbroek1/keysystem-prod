@@ -1,18 +1,8 @@
-<!doctype html><meta charset="utf-8" />
+<!doctype html><meta charset="utf-8">
 <script>
-(async function(){
-  const u = new URL(location.href);
-  const hash = u.searchParams.get('hash');
-  const hwid = u.searchParams.get('hwid');
-  try{
-    const r = await fetch('/.netlify/functions/lv-verify?step=2&hash='+encodeURIComponent(hash||''), { method:'GET' });
-    const d = await r.json();
-    if(d.ok === true){
-      localStorage.setItem('lv2','1');
-    }
-  }catch(_){}
-  var qs=[]; if(hwid) qs.push('hwid='+encodeURIComponent(hwid)); qs.push('lv=2');
-  location.replace('/' + (qs.length?('?'+qs.join('&')):'')); // terug naar homepage
-})();
+try{ localStorage.setItem('lv2','1'); }catch(e){}
+const u = new URL(location.href);
+const hwid = u.searchParams.get('hwid');
+location.replace('/' + (hwid ? ('?hwid='+encodeURIComponent(hwid)) : ''));
 </script>
-<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Verifying step 2…</body>
+<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Step 2 done…</body>
