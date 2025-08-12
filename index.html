@@ -69,54 +69,55 @@
 
 <script>
 /*** CONFIG ***/
-const PROXY = "/.netlify/functions/keyproxy";
+const PROXY    = "/.netlify/functions/keyproxy";
 const DEVISSUE = "/.netlify/functions/dev-issue";
-const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
-const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
+const STEP1    = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2    = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
 /*** STATE ***/
 let token = null;
 window.onTurnstile = t => { token = t; refresh(); };
 
 /*** LOCAL STORAGE HELPERS ***/
-function setLv(n){ localStorage.setItem('lv'+n, '1'); }
-function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
-function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
+function setLv(n){ try{ localStorage.setItem('lv'+n, '1'); }catch(_){} }
+function clearLv(){ try{ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }catch(_){} }
+function flags(){ try{ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }catch(_){ return {s1:false,s2:false}; } }
 function getActive(){
-  const k = localStorage.getItem('activeKey');
-  const e = Number(localStorage.getItem('activeKeyExp') || 0);
-  if (!k || !e || Date.now()>e) return null;
-  return { key:k, expiresAt:e };
+  try{
+    const k = localStorage.getItem('activeKey');
+    const e = Number(localStorage.getItem('activeKeyExp') || 0);
+    if (!k || !e || Date.now()>e) return null;
+    return { key:k, expiresAt:e };
+  }catch(_){ return null; }
 }
 function setActive(k){
-  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
-  localStorage.setItem('activeKey', k.key);
-  localStorage.setItem('activeKeyExp', String(k.expiresAt));
+  try{
+    if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
+    localStorage.setItem('activeKey', k.key);
+    localStorage.setItem('activeKeyExp', String(k.expiresAt));
+  }catch(_){}
 }
 function clearAllLocal(){
   setActive(null);
   clearLv();
-  // bewaar hwid wél
+  // keep hwid
 }
 
-/*** URL CAPTURE + PURGE ***/
+/*** URL CAPTURE + PURGE (supports /lv/1 and /lv/2 and ?lv=1/2) ***/
 (function bootstrap(){
   const url = new URL(location.href);
   const hwid = url.searchParams.get('hwid');
   const lvQ  = url.searchParams.get('lv');
   const purge = url.searchParams.get('purge');
 
-  // accept /lv/1 and /lv/2 as well
-  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
-  if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
-
+  // /lv/1 or /lv/2 handled by those pages; here we also accept ?lv=1/2 for safety
   if (lvQ==='1') setLv(1);
   if (lvQ==='2') setLv(2);
-  if (hwid) localStorage.setItem('hwid', hwid);
+  if (hwid) try{ localStorage.setItem('hwid', hwid); }catch(_){}
   if (purge==='1'){ clearAllLocal(); }
 
-  if (hwid || lvQ || m || purge) {
-    history.replaceState({}, '', '/'); // pretty URL
+  if (hwid || lvQ || purge) {
+    history.replaceState({}, '', '/'); // clean URL
   }
 })();
 
@@ -139,7 +140,8 @@ function renderKeyCard(k){
   if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
   const left=fmtLeft(k.expiresAt);
   row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
-  document.getElementById('copyBtn').onclick=()=>navigator.clipboard.writeText(k.key);
+  const btn = document.getElementById('copyBtn');
+  if (btn) btn.onclick=()=>navigator.clipboard.writeText(k.key).catch(()=>{});
 }
 function refresh(){
   const { s1,s2 } = flags();
@@ -152,10 +154,9 @@ function refresh(){
   document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-/*** SERVER SYNC — CRITICAL FIX ***/
+/*** SERVER SYNC — reconcile with backend so UI always matches reality ***/
 async function syncWithServer(){
-  const hwid = localStorage.getItem('hwid');
-  if (!hwid) return;
+  const hwid = localStorage.getItem('hwid'); if(!hwid) return;
   try{
     const r = await fetch(PROXY,{
       method:'POST',
@@ -164,16 +165,11 @@ async function syncWithServer(){
     });
     const d = await r.json();
     if (d.ok && d.key){
-      const local = getActive();
-      if (!local || local.key !== d.key || local.expiresAt !== d.expiresAt){
-        // server knows a (new) valid key → update local
-        const k = { key:d.key, expiresAt:d.expiresAt };
-        setActive(k); renderKeyCard(k);
-      }
+      const k = { key:d.key, expiresAt:d.expiresAt };
+      setActive(k); renderKeyCard(k);
     } else {
-      // server has no valid key for this HWID → force fresh start
-      clearAllLocal();
-      renderKeyCard(null);
+      // server has no valid key for this HWID → wipe local so user must redo steps
+      clearAllLocal(); renderKeyCard(null);
     }
     refresh();
   }catch(_){}
@@ -184,7 +180,7 @@ async function init(){
   const local = getActive();
   if (local) renderKeyCard(local);
   refresh();
-  // always reconcile with server (fixes "still 2/2 + old key" after resets)
+  // Always reconcile (handles Admin resets / new key issuance)
   await syncWithServer();
 }
 init();
@@ -192,7 +188,8 @@ init();
 /*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  window.open(s1 ? STEP2 : STEP1, '_blank');
+  // /lv/1 and /lv/2 are real pages that do server-side anti-bypass check via lv-verify
+  window.open(s1 ? "/lv/2" : "/lv/1", '_blank');
 };
 
 document.getElementById('btnGet').onclick = async () => {
@@ -210,15 +207,13 @@ document.getElementById('btnGet').onclick = async () => {
       setActive(k); renderKeyCard(k); refresh();
     } else {
       alert('Error: '+(d.error||'unknown'));
-      // just in case server says expired/not_found/superseded: wipe local
+      // if server says expired/not_found/superseded: wipe local so user restarts
       if (d && d.error && d.error !== 'turnstile_failed') { clearAllLocal(); refresh(); }
     }
-  } finally {
-    document.getElementById('btnGet').disabled=false;
-  }
+  } finally { document.getElementById('btnGet').disabled=false; }
 };
 
-// DEV quick key on same site (uses Netlify function with ADMIN_SECRET)
+// DEV quick key (same site function uses ADMIN_SECRET on server)
 const btnDev = document.getElementById('btnDev');
 btnDev && (btnDev.onclick = async () => {
   const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?');
