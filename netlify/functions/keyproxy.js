@@ -1,6 +1,9 @@
+// netlify/functions/keyproxy.js
 exports.handler = async (event) => {
   const method = (event.httpMethod || 'POST').toUpperCase();
   if (method === 'OPTIONS') return resp(200, {});
+  if (method !== 'POST')    return resp(405, { ok:false, error:'method_not_allowed' });
+
   try {
     const APPS_EXEC = process.env.APPS_EXEC;
     if (!APPS_EXEC) return resp(500, { ok:false, error:'missing_APPS_EXEC' });
@@ -10,14 +13,13 @@ exports.handler = async (event) => {
     const raw = event.body || '';
 
     let payload = {};
-    if (method === 'POST') {
-      if (ct.includes('application/x-www-form-urlencoded')) {
-        payload = parseForm(raw);
-      } else if (raw && raw.length > 0) {
-        try { payload = JSON.parse(raw); } catch { payload = {}; }
-      }
+    if (ct.includes('application/x-www-form-urlencoded')) {
+      payload = parseForm(raw);
+    } else if (raw) {
+      try { payload = JSON.parse(raw); } catch { payload = {}; }
     }
-    // Fallback: querystring (voor executors die body strippen)
+
+    // Fallback: pak ook querystring als body leeg of action ontbreekt
     if (!payload.action) {
       const q = event.queryStringParameters || {};
       if (q && (q.action || q.hwid || q.key)) payload = q;
@@ -25,11 +27,14 @@ exports.handler = async (event) => {
 
     console.log(`[keyproxy] m=${method} ct=${ct} len=${raw.length} action=${payload.action||'undefined'}`);
 
+    // Stuur door naar Apps Script (altijd JSON)
     const r = await fetch(APPS_EXEC, {
       method: 'POST',
       headers: { 'Content-Type':'application/json' },
       body: JSON.stringify(payload),
+      redirect: 'follow' // ok; Apps Script 302 wordt gevolgd
     });
+
     const text = await r.text();
     console.log(`[keyproxy] RESP ${r.status} ${text.slice(0,200)}`);
     return resp(r.ok ? 200 : 500, text, true);
