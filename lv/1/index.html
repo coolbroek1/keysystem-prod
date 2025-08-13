@@ -7,7 +7,7 @@
 (async function(){
   try{
     const u = new URL(location.href);
-    const hash = u.searchParams.get('hash') || '';                 // not required now
+    const hash = u.searchParams.get('hash') || '';
     const hwid = u.searchParams.get('hwid') || localStorage.getItem('hwid') || '';
     const ref  = document.referrer || '';
 
@@ -24,7 +24,7 @@
     } else {
       localStorage.removeItem('lv1');
       document.body.innerHTML = '<div class="msg">Bypass detected. Please complete Linkvertise normally.</div>';
-      setTimeout(()=>location.replace('/'), 1500);
+      setTimeout(()=>location.replace('/'), 2200);
     }
   }catch(e){
     location.replace('/');
