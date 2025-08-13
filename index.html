@@ -114,7 +114,8 @@
 /* =========================
    CONFIG
 ========================= */
-const PROXY  = "/.netlify/functions/keyproxy"; // Netlify function → Apps Script
+const PROXY  = "/.netlify/functions/keyproxy";         // Netlify function → Apps Script
+const VERIFY = "/.netlify/functions/lv-verify";         // Anti-bypass verifier
 const STEP1  = "https://link-hub.net/1380626/oXYyD2XlP2qW";
 const STEP2  = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
@@ -147,21 +148,53 @@ function clearKeyOnly(){
 }
 
 /* =========================
-   CAPTURE RETURN FROM LV
-   (supports ?lv=, ?step=, and /lv/1 or /lv/2)
+   CAPTURE RETURN FROM LINKVERTISE
+   (Alleen ?step & ?hash → verifiëren!  GEEN auto-set op ?step of /lv/)
 ========================= */
-(function bootstrap(){
+(async function verifyFromQuery(){
   const url  = new URL(location.href);
   const hwid = url.searchParams.get('hwid');
-  const lv   = url.searchParams.get('lv');
-  const step = url.searchParams.get('step');
-  const m    = location.pathname.match(/\/lv\/(1|2)\/?$/);
+  const lv   = url.searchParams.get('lv');     // legacy
+  const step = url.searchParams.get('step');   // "1" | "2"
+  const hash = url.searchParams.get('hash');   // 64 hex
 
-  if (lv==='1' || step==='1' || (m && m[1]==='1')) setLv(1);
-  if (lv==='2' || step==='2' || (m && m[1]==='2')) setLv(2);
+  // HWID onthouden (van Roblox link)
   if (hwid) localStorage.setItem('hwid', hwid);
 
-  if (hwid || lv || step || m) history.replaceState({}, '', '/');
+  // Legacy "?lv=1/2" blijft werken, maar NIET voor ?step (die moet via verify)
+  if (lv === '1') setLv(1);
+  if (lv === '2') setLv(2);
+
+  // Als er een verse Linkvertise-hash is: direct laten verifiëren (snel — hash verloopt ±10s)
+  if (step && hash) {
+    const row = document.getElementById('keyRow');
+    if (row) row.textContent = 'Verifying step '+step+'…';
+
+    try {
+      const r = await fetch(VERIFY, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ step:String(step), hash:String(hash) })
+      });
+      const d = await r.json();
+
+      if (d && d.ok && d.verified) {
+        // geldig → progress zetten
+        setLv(step === '1' ? 1 : 2);
+      } else {
+        if (row) row.textContent = 'Bypass detected (or link expired). Open portal and try again.';
+      }
+    } catch(_){
+      if (row) row.textContent = 'Network error during verification.';
+    }
+
+    // URL opschonen na verify
+    history.replaceState({}, '', '/');
+    try{ refresh(); }catch(_){}
+  } else if (hwid || lv) {
+    // alleen HWID/legacy lv → opschonen
+    history.replaceState({}, '', '/');
+  }
 })();
 
 /* =========================
@@ -219,7 +252,7 @@ async function syncWithServer(){
   }catch(_){}
 }
 
-// luister naar admin-resets/issue (die je Admin-pagina naar localStorage kan zetten)
+// Luister naar admin-resets/issue (Admin-pagina zet localStorage("serverChange"))
 window.addEventListener('storage', (e)=>{
   if (e.key==='serverChange' && e.newValue){
     try{
