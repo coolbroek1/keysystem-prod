@@ -17,8 +17,7 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
 .bar{height:6px;width:220px;background:#0f1726;border-radius:999px;overflow:hidden}.bar>span{display:block;height:100%;width:0%;background:var(--accent)}
 .footer{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px;border-top:1px solid var(--line);flex-wrap:wrap}
 .btn{padding:10px 16px;border-radius:10px;border:1px solid #2a3553;cursor:pointer;background:#182139;color:#dfe7ff;font-weight:600;transition:.15s transform,.15s filter}
-.btn:hover{transform:translateY(-1px);filter:brightness(1.05)}
-.btn:active{transform:translateY(0)}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.05)}.btn:active{transform:translateY(0)}
 .btn.green{background:var(--green);border-color:var(--green);color:#fff}.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn[disabled]{opacity:.6;cursor:not-allowed}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -63,57 +62,41 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
 </div></div>
 
 <script>
-/*** CONFIG ***/
 const PROXY = "/.netlify/functions/keyproxy";
 const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
 const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
-/*** STATE ***/
 let token = null;
 window.onTurnstile = t => { token = t; refresh(); };
 
-/*** LOCAL STORAGE HELPERS ***/
 function setLv(n){ localStorage.setItem('lv'+n, '1'); }
 function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
 function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
-function getActive(){
-  const k = localStorage.getItem('activeKey');
-  const e = Number(localStorage.getItem('activeKeyExp') || 0);
-  if (!k || !e || Date.now()>e) return null;
-  return { key:k, expiresAt:e };
-}
-function setActive(k){
-  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
-  localStorage.setItem('activeKey', k.key);
-  localStorage.setItem('activeKeyExp', String(k.expiresAt));
-}
+function getActive(){ const k=localStorage.getItem('activeKey'); const e=Number(localStorage.getItem('activeKeyExp')||0); if(!k||!e||Date.now()>e) return null; return {key:k,expiresAt:e}; }
+function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.removeItem('activeKeyExp');return;} localStorage.setItem('activeKey',k.key); localStorage.setItem('activeKeyExp',String(k.expiresAt)); }
 
-/*** URL CAPTURE (HWID & LV) ***/
-(function(){
-  const url = new URL(location.href);
-  const hwid = url.searchParams.get('hwid');
-  const lvQ  = url.searchParams.get('lv');
-  // accepteer ook /lv/1 & /lv/2
-  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
-  if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
-  if (lvQ==='1') setLv(1);
-  if (lvQ==='2') setLv(2);
-  if (hwid) localStorage.setItem('hwid', hwid);
-  if (hwid || lvQ || m) history.replaceState({}, '', '/');
+(function capture(){
+  const u=new URL(location.href);
+  const hwid=u.searchParams.get('hwid');
+  const lvQ=u.searchParams.get('lv');
+  const m=location.pathname.match(/\/lv\/(1|2)\/?$/);
+  if(m){ if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
+  if(lvQ==='1') setLv(1);
+  if(lvQ==='2') setLv(2);
+  if(hwid) localStorage.setItem('hwid',hwid);
+  if(hwid||lvQ||m) history.replaceState({},'','/');
 })();
 
-/*** UI HELPERS ***/
-function fmtLeft(exp){ const ms = Math.max(0, exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
+function fmtLeft(exp){ const ms=Math.max(0,exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
 function renderKeyCard(k){
   const row=document.getElementById('keyRow');
-  if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
+  if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return; }
   const left=fmtLeft(k.expiresAt);
   row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
-  const c = document.getElementById('copyBtn'); c && (c.onclick=()=>navigator.clipboard.writeText(k.key));
+  const c=document.getElementById('copyBtn'); c&&(c.onclick=()=>navigator.clipboard.writeText(k.key));
 }
 function refresh(){
-  const { s1,s2 } = flags();
-  const done=(s1?1:0)+(s2?1:0);
+  const {s1,s2}=flags(); const done=(s1?1:0)+(s2?1:0);
   document.getElementById('progLabel').textContent = `${done}/2`;
   document.getElementById('progBar').style.width = `${(done/2)*100}%`;
   const hasActive = !!getActive();
@@ -121,14 +104,8 @@ function refresh(){
   document.getElementById('hint').textContent = !!token ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-/*** INIT ***/
-(function init(){
-  const local = getActive(); if(local) renderKeyCard(local);
-  refresh();
-  window.addEventListener('focus', refresh);
-})();
+(function init(){ const local=getActive(); if(local) renderKeyCard(local); refresh(); window.addEventListener('focus', refresh); })();
 
-/*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if(!hwid) return;
   localStorage.setItem('hwid', hwid);
@@ -143,21 +120,13 @@ document.getElementById('btnGet').onclick = async () => {
     wait.style.display='flex';
     document.getElementById('btnGet').disabled=true;
     const r = await fetch(PROXY,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'request_key', hwid, turnstileToken: token })
     });
     const d = await r.json();
-    if(d.ok&&d.key){
-      const k={key:d.key, expiresAt:d.expiresAt};
-      setActive(k); renderKeyCard(k); refresh();
-    } else {
-      alert('Error: '+(d.error||'unknown'));
-    }
-  } finally {
-    document.getElementById('btnGet').disabled=false;
-    wait.style.display='none';
-  }
+    if(d.ok&&d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
+    else alert('Error: '+(d.error||'unknown'));
+  } finally { document.getElementById('btnGet').disabled=false; wait.style.display='none'; }
 };
 </script>
 </body>
