@@ -29,7 +29,7 @@
     .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
     .dev{display:none}
     .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .brand{font-size:12px; color:#8ad2ff}
+    .hint{font-size:12px; color:var(--muted)}
   </style>
 </head>
 <body>
@@ -54,13 +54,13 @@
         <div class="row">
           <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
           <button id="btnGet" class="btn blue" disabled>Get Key</button>
-          <div class="brand" id="hint">by Ezyscript❤️</div>
+          <div class="hint" id="hint">by Ezyscript❤️</div>
         </div>
 
         <div id="devbar" class="dev">
           <input id="devHwid" placeholder="HWID" style="padding:8px 10px;border-radius:8px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;" />
           <button id="btnDev" class="btn">DEV: Quick Key</button>
-          <span class="muted">(Alt+D toggles this bar)</span>
+          <span class="hint">(Alt+D toggles this bar)</span>
         </div>
       </div>
     </div>
@@ -70,8 +70,9 @@
 /*** CONFIG ***/
 const PROXY   = "/.netlify/functions/keyproxy";
 const DEVISSUE= "/.netlify/functions/dev-issue";
-const STEP1   = "/lv/1";
-const STEP2   = "/lv/2";
+// BELANGRIJK: Linkvertise URLS hier (deze openen de LV pagina)
+const STEP1   = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2   = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
 /*** STATE ***/
 let token = null;
@@ -92,20 +93,30 @@ function setActive(k){
   localStorage.setItem('activeKey', k.key);
   localStorage.setItem('activeKeyExp', String(k.expiresAt));
 }
+function clearAllLocal(){
+  setActive(null);
+  clearLv();
+}
 
-/*** URL CAPTURE (from Roblox portal etc.) + clean URL ***/
+/*** URL CAPTURE + PURGE ***/
 (function bootstrap(){
   const url = new URL(location.href);
   const hwid = url.searchParams.get('hwid');
   const lvQ  = url.searchParams.get('lv');
-  const purge= url.searchParams.get('purge');
+  const purge = url.searchParams.get('purge');
 
-  if (hwid) localStorage.setItem('hwid', hwid);
+  // accept /lv/1 and /lv/2 too (als iemand handmatig terugkomt)
+  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
+  if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
+
   if (lvQ==='1') setLv(1);
   if (lvQ==='2') setLv(2);
-  if (purge==='1'){ setActive(null); clearLv(); }
+  if (hwid) localStorage.setItem('hwid', hwid);
+  if (purge==='1'){ clearAllLocal(); }
 
-  if (hwid || lvQ || purge) history.replaceState({}, '', '/');
+  if (hwid || lvQ || m || purge) {
+    history.replaceState({}, '', '/');
+  }
 })();
 
 /*** DEV TOGGLE ***/
@@ -135,10 +146,12 @@ function refresh(){
   document.getElementById('progLabel').textContent = `${prog}/2`;
   document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
   const hasActive = !!getActive();
-  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&!!token);
+  const cfOk = !!token;
+  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOk);
+  document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-/*** SERVER RECONCILE (keeps UI in sync after admin reset/issue) ***/
+/*** SERVER SYNC ***/
 async function syncWithServer(){
   const hwid = localStorage.getItem('hwid');
   if (!hwid) return;
@@ -156,13 +169,15 @@ async function syncWithServer(){
         setActive(k); renderKeyCard(k);
       }
     } else {
-      setActive(null); renderKeyCard(null); refresh();
+      clearAllLocal();
+      renderKeyCard(null);
     }
+    refresh();
   }catch(_){}
 }
 
 /*** INIT ***/
-(async function(){
+(async function init(){
   const local = getActive();
   if (local) renderKeyCard(local);
   refresh();
@@ -172,9 +187,8 @@ async function syncWithServer(){
 /*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  // altijd naar /lv/1 of /lv/2 (Linkvertise voegt zelf ?hash=... toe)
-  const target = s1 ? STEP2 : STEP1;
-  window.open(target, '_blank');
+  // BELANGRIJK: open de echte Linkvertise links
+  window.open(s1 ? STEP2 : STEP1, '_blank');
 };
 
 document.getElementById('btnGet').onclick = async () => {
@@ -192,14 +206,14 @@ document.getElementById('btnGet').onclick = async () => {
       setActive(k); renderKeyCard(k); refresh();
     } else {
       alert('Error: '+(d.error||'unknown'));
-      if (d && d.error && d.error !== 'turnstile_failed') { setActive(null); clearLv(); refresh(); }
+      if (d && d.error && d.error !== 'turnstile_failed') { clearAllLocal(); refresh(); }
     }
   } finally {
     document.getElementById('btnGet').disabled=false;
   }
 };
 
-// DEV quick key (same site function)
+// DEV quick key (zelfde site)
 const btnDev = document.getElementById('btnDev');
 btnDev && (btnDev.onclick = async () => {
   const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?');
