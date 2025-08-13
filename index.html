@@ -60,18 +60,23 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
 </div></div>
 
 <script>
+/*** CONFIG ***/
 const PROXY="/.netlify/functions/keyproxy";
 const STEP1="https://link-hub.net/1380626/oXYyD2XlP2qW";
 const STEP2="https://link-hub.net/1380626/bouVTQdnXmmi";
 
+/*** TURNSTILE ***/
 let token=null; window.onTurnstile=t=>{ token=t; refresh(); };
 
+/*** LOCAL STORAGE HELPERS ***/
 function setLv(n){ localStorage.setItem('lv'+n,'1'); }
 function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
 function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
 function getActive(){ const k=localStorage.getItem('activeKey'); const e=Number(localStorage.getItem('activeKeyExp')||0); if(!k||!e||Date.now()>e) return null; return {key:k,expiresAt:e}; }
 function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.removeItem('activeKeyExp');return;} localStorage.setItem('activeKey',k.key); localStorage.setItem('activeKeyExp',String(k.expiresAt)); }
+function clearAllLocal(){ setActive(null); clearLv(); /* keep hwid */ }
 
+/*** URL CAPTURE (hwid + lv) ***/
 (function capture(){
   const u=new URL(location.href);
   const hwid=u.searchParams.get('hwid');
@@ -84,6 +89,7 @@ function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.
   if(hwid||lvQ||m) history.replaceState({},'','/');
 })();
 
+/*** UI ***/
 function fmtLeft(exp){ const ms=Math.max(0,exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
 function renderKeyCard(k){
   const row=document.getElementById('keyRow');
@@ -101,21 +107,46 @@ function refresh(){
   document.getElementById('hint').textContent = !!token ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
+/*** SERVER SYNC (always trust server) ***/
 async function syncWithServer(){
   const hwid=localStorage.getItem('hwid'); if(!hwid) return;
   try{
     const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid})});
     const d=await r.json();
     if(d.ok&&d.key){
-      const k={key:d.key,expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k);
+      const k={key:d.key,expiresAt:d.expiresAt};
+      setActive(k); renderKeyCard(k);
+    } else {
+      // no valid key on server → wipe local *including progress*
+      clearAllLocal(); renderKeyCard(null);
     }
     refresh();
   }catch(_){}
 }
 
-(function init(){ const local=getActive(); if(local) renderKeyCard(local); refresh(); window.addEventListener('focus', refresh); syncWithServer(); })();
+/*** INIT + AUTO-RESYNC hooks ***/
+(function init(){
+  const local=getActive(); if(local) renderKeyCard(local);
+  refresh();
+  // 1) on page focus or visibility back → refresh + server sync
+  window.addEventListener('focus', syncWithServer);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) syncWithServer(); });
+  // 2) listen for admin "serverChange" signal (storage event from Admin page)
+  window.addEventListener('storage', (e)=>{ if(e.key==='serverChange') syncWithServer(); });
+  // 3) periodic gentle poll (every 10s)
+  setInterval(syncWithServer, 10000);
+  // first immediate sync
+  syncWithServer();
+})();
 
-btnStart.onclick=()=>{ const hwid=localStorage.getItem('hwid')||prompt('Enter your HWID (from Roblox):'); if(!hwid) return; localStorage.setItem('hwid',hwid); const {s1,s2}=flags(); window.open(s1?STEP2:STEP1,'_blank'); };
+/*** ACTIONS ***/
+btnStart.onclick=()=>{ 
+  const hwid=localStorage.getItem('hwid')||prompt('Enter your HWID (from Roblox):'); 
+  if(!hwid) return; 
+  localStorage.setItem('hwid',hwid); 
+  const {s1,s2}=flags(); 
+  window.open(s1?STEP2:STEP1,'_blank'); 
+};
 
 const wait=document.getElementById('wait');
 btnGet.onclick=async()=>{
@@ -124,8 +155,10 @@ btnGet.onclick=async()=>{
     wait.style.display='flex'; btnGet.disabled=true;
     const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_key', hwid, turnstileToken: token})});
     const d=await r.json();
-    if(d.ok&&d.key){ const k={key:d.key,expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
-    else alert('Error: '+(d.error||'unknown'));
+    if(d.ok&&d.key){ const k={key:d.key,expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); }
+    else{ alert('Error: '+(d.error||'unknown')); }
+    // after any attempt, confirm with server (handles superseded/revoked)
+    await syncWithServer();
   } finally { btnGet.disabled=false; wait.style.display='none'; }
 };
 </script>
