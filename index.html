@@ -30,6 +30,7 @@
     .dev{display:none}
     .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .hint{font-size:12px; color:var(--muted)}
+    .brand{font-size:12px; color:#8ad2ff}
   </style>
 </head>
 <body>
@@ -70,9 +71,8 @@
 /*** CONFIG ***/
 const PROXY   = "/.netlify/functions/keyproxy";
 const DEVISSUE= "/.netlify/functions/dev-issue";
-// BELANGRIJK: Linkvertise URLS hier (deze openen de LV pagina)
-const STEP1   = "https://link-hub.net/1380626/oXYyD2XlP2qW";
-const STEP2   = "https://link-hub.net/1380626/bouVTQdnXmmi";
+const STEP1   = "https://link-hub.net/1380626/oXYyD2XlP2qW";   // jouw Linkvertise link 1 (target → /lv/1)
+const STEP2   = "https://link-hub.net/1380626/bouVTQdnXmmi";   // jouw Linkvertise link 2 (target → /lv/2)
 
 /*** STATE ***/
 let token = null;
@@ -96,16 +96,17 @@ function setActive(k){
 function clearAllLocal(){
   setActive(null);
   clearLv();
+  // HWID laten staan
 }
 
 /*** URL CAPTURE + PURGE ***/
 (function bootstrap(){
-  const url = new URL(location.href);
-  const hwid = url.searchParams.get('hwid');
-  const lvQ  = url.searchParams.get('lv');
+  const url   = new URL(location.href);
+  const hwid  = url.searchParams.get('hwid');
+  const lvQ   = url.searchParams.get('lv');
   const purge = url.searchParams.get('purge');
 
-  // accept /lv/1 and /lv/2 too (als iemand handmatig terugkomt)
+  // accepteer ook /lv/1 en /lv/2 (handig als iemand daar direct terecht komt)
   const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
   if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
 
@@ -115,7 +116,7 @@ function clearAllLocal(){
   if (purge==='1'){ clearAllLocal(); }
 
   if (hwid || lvQ || m || purge) {
-    history.replaceState({}, '', '/');
+    history.replaceState({}, '', '/'); // maak URL weer clean
   }
 })();
 
@@ -151,7 +152,7 @@ function refresh(){
   document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-/*** SERVER SYNC ***/
+/*** SERVER SYNC — zorgt dat site gelijk loopt met backend (na resets/issue) ***/
 async function syncWithServer(){
   const hwid = localStorage.getItem('hwid');
   if (!hwid) return;
@@ -177,17 +178,17 @@ async function syncWithServer(){
 }
 
 /*** INIT ***/
-(async function init(){
+async function init(){
   const local = getActive();
   if (local) renderKeyCard(local);
   refresh();
   await syncWithServer();
-})();
+}
+init();
 
 /*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  // BELANGRIJK: open de echte Linkvertise links
   window.open(s1 ? STEP2 : STEP1, '_blank');
 };
 
@@ -213,7 +214,7 @@ document.getElementById('btnGet').onclick = async () => {
   }
 };
 
-// DEV quick key (zelfde site)
+// DEV quick key (zelfde site; gebruikt Netlify function + ADMIN_SECRET)
 const btnDev = document.getElementById('btnDev');
 btnDev && (btnDev.onclick = async () => {
   const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?');
