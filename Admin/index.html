@@ -44,8 +44,9 @@ const fmt = new Intl.DateTimeFormat('en-GB',{
   timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit',
   hour:'2-digit', minute:'2-digit'
 });
-
 let PASS = null;
+function pingPortal(){ try{ localStorage.setItem('serverChange', String(Date.now())); }catch(_){} }
+
 unlock.onclick = () => {
   if ((pw.value||'').trim() === 'aze') { PASS='aze'; panel.style.display='block'; pw.value=''; out.textContent='Ready.'; }
   else alert('Wrong password');
@@ -75,7 +76,8 @@ issue.onclick = async () => {
       body:JSON.stringify({action:'admin_issue_key', hwid:id, adminSecret:PASS})});
     const d = await r.json();
     if (d.ok){
-      out.innerHTML = "NEW Key: <b>"+d.key+"</b>\nExpires: "+fmt.format(new Date(d.expiresAt));
+      out.innerHTML = "NEW Key: <b>"+d.key+"</b>\nExpires: "+fmt.format(new Date(d.expiresAt))+"\n\n(Portal will sync automatically)";
+      pingPortal();
     } else {
       out.textContent = "Error: "+(d.error||'unknown');
     }
@@ -90,7 +92,12 @@ revoke.onclick = async () => {
     const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'admin_revoke_hwid', hwid:id, adminSecret:PASS})});
     const d = await r.json();
-    out.textContent = d.ok ? "Revoked." : ("Error: "+(d.error||'unknown'));
+    if (d.ok){
+      out.textContent = "Revoked. (Portal will reset automatically)";
+      pingPortal();
+    } else {
+      out.textContent = "Error: "+(d.error||'unknown');
+    }
   }catch(e){ out.textContent = "Network error: "+e; }
 };
 </script>
