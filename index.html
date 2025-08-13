@@ -29,7 +29,7 @@
     .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
     .dev{display:none}
     .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .hint{font-size:12px; color:var(--muted)}
+    .brand{font-size:12px; color:#8ad2ff}
   </style>
 </head>
 <body>
@@ -54,13 +54,13 @@
         <div class="row">
           <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
           <button id="btnGet" class="btn blue" disabled>Get Key</button>
-          <div class="hint" id="hint">by Ezyscript❤️</div>
+          <div class="brand" id="hint">by Ezyscript❤️</div>
         </div>
 
         <div id="devbar" class="dev">
           <input id="devHwid" placeholder="HWID" style="padding:8px 10px;border-radius:8px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff;" />
           <button id="btnDev" class="btn">DEV: Quick Key</button>
-          <span class="hint">(Alt+D toggles this bar)</span>
+          <span class="muted">(Alt+D toggles this bar)</span>
         </div>
       </div>
     </div>
@@ -68,50 +68,44 @@
 
 <script>
 /*** CONFIG ***/
-const PROXY    = "/.netlify/functions/keyproxy";
-const DEVISSUE = "/.netlify/functions/dev-issue";
-const STEP1    = "https://link-hub.net/1380626/oXYyD2XlP2qW";  // goes OUT to Linkvertise
-const STEP2    = "https://link-hub.net/1380626/bouVTQdnXmmi";  // goes OUT to Linkvertise
-// In Linkvertise, set Target URLs to:  https://timely-biscochitos-88e2f6.netlify.app/lv/1  and  /lv/2
+const PROXY   = "/.netlify/functions/keyproxy";
+const DEVISSUE= "/.netlify/functions/dev-issue";
+const STEP1   = "/lv/1";
+const STEP2   = "/lv/2";
 
 /*** STATE ***/
 let token = null;
 window.onTurnstile = t => { token = t; refresh(); };
 
 /*** LOCAL STORAGE HELPERS ***/
-function setLv(n){ try{ localStorage.setItem('lv'+n, '1'); }catch(_){} }
-function clearLv(){ try{ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }catch(_){} }
-function flags(){ try{ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }catch(_){ return {s1:false,s2:false}; } }
+function setLv(n){ localStorage.setItem('lv'+n, '1'); }
+function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
+function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
 function getActive(){
-  try{
-    const k = localStorage.getItem('activeKey');
-    const e = Number(localStorage.getItem('activeKeyExp') || 0);
-    if (!k || !e || Date.now()>e) return null;
-    return { key:k, expiresAt:e };
-  }catch(_){ return null; }
+  const k = localStorage.getItem('activeKey');
+  const e = Number(localStorage.getItem('activeKeyExp') || 0);
+  if (!k || !e || Date.now()>e) return null;
+  return { key:k, expiresAt:e };
 }
 function setActive(k){
-  try{
-    if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
-    localStorage.setItem('activeKey', k.key);
-    localStorage.setItem('activeKeyExp', String(k.expiresAt));
-  }catch(_){}
+  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
+  localStorage.setItem('activeKey', k.key);
+  localStorage.setItem('activeKeyExp', String(k.expiresAt));
 }
-function clearAllLocal(){ setActive(null); clearLv(); /* keep hwid */ }
 
-/*** URL CAPTURE + PURGE (also accepts ?lv=1/2 as fallback) ***/
+/*** URL CAPTURE (from Roblox portal etc.) + clean URL ***/
 (function bootstrap(){
   const url = new URL(location.href);
   const hwid = url.searchParams.get('hwid');
   const lvQ  = url.searchParams.get('lv');
-  const purge = url.searchParams.get('purge');
+  const purge= url.searchParams.get('purge');
 
+  if (hwid) localStorage.setItem('hwid', hwid);
   if (lvQ==='1') setLv(1);
   if (lvQ==='2') setLv(2);
-  if (hwid) try{ localStorage.setItem('hwid', hwid); }catch(_){}
-  if (purge==='1'){ clearAllLocal(); }
+  if (purge==='1'){ setActive(null); clearLv(); }
 
-  if (hwid || lvQ || purge) history.replaceState({}, '', '/'); // clean URL
+  if (hwid || lvQ || purge) history.replaceState({}, '', '/');
 })();
 
 /*** DEV TOGGLE ***/
@@ -133,8 +127,7 @@ function renderKeyCard(k){
   if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
   const left=fmtLeft(k.expiresAt);
   row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
-  const btn = document.getElementById('copyBtn');
-  if (btn) btn.onclick=()=>navigator.clipboard.writeText(k.key).catch(()=>{});
+  document.getElementById('copyBtn').onclick=()=>navigator.clipboard.writeText(k.key);
 }
 function refresh(){
   const { s1,s2 } = flags();
@@ -142,14 +135,13 @@ function refresh(){
   document.getElementById('progLabel').textContent = `${prog}/2`;
   document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
   const hasActive = !!getActive();
-  const cfOk = !!token;
-  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOk);
-  document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
+  document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&!!token);
 }
 
-/*** SERVER SYNC — keep UI in sync with backend ***/
+/*** SERVER RECONCILE (keeps UI in sync after admin reset/issue) ***/
 async function syncWithServer(){
-  const hwid = localStorage.getItem('hwid'); if(!hwid) return;
+  const hwid = localStorage.getItem('hwid');
+  if (!hwid) return;
   try{
     const r = await fetch(PROXY,{
       method:'POST',
@@ -158,29 +150,31 @@ async function syncWithServer(){
     });
     const d = await r.json();
     if (d.ok && d.key){
-      const k = { key:d.key, expiresAt:d.expiresAt };
-      setActive(k); renderKeyCard(k);
+      const local = getActive();
+      if (!local || local.key !== d.key || local.expiresAt !== d.expiresAt){
+        const k = { key:d.key, expiresAt:d.expiresAt };
+        setActive(k); renderKeyCard(k);
+      }
     } else {
-      clearAllLocal(); renderKeyCard(null);
+      setActive(null); renderKeyCard(null); refresh();
     }
-    refresh();
   }catch(_){}
 }
 
 /*** INIT ***/
-async function init(){
+(async function(){
   const local = getActive();
   if (local) renderKeyCard(local);
   refresh();
   await syncWithServer();
-}
-init();
+})();
 
 /*** ACTIONS ***/
 document.getElementById('btnStart').onclick = () => {
   const { s1,s2 } = flags();
-  // IMPORTANT: go OUT to Linkvertise first!
-  window.open(s1 ? STEP2 : STEP1, '_blank');
+  // altijd naar /lv/1 of /lv/2 (Linkvertise voegt zelf ?hash=... toe)
+  const target = s1 ? STEP2 : STEP1;
+  window.open(target, '_blank');
 };
 
 document.getElementById('btnGet').onclick = async () => {
@@ -198,12 +192,14 @@ document.getElementById('btnGet').onclick = async () => {
       setActive(k); renderKeyCard(k); refresh();
     } else {
       alert('Error: '+(d.error||'unknown'));
-      if (d && d.error && d.error !== 'turnstile_failed') { clearAllLocal(); refresh(); }
+      if (d && d.error && d.error !== 'turnstile_failed') { setActive(null); clearLv(); refresh(); }
     }
-  } finally { document.getElementById('btnGet').disabled=false; }
+  } finally {
+    document.getElementById('btnGet').disabled=false;
+  }
 };
 
-// DEV quick key (same site function uses ADMIN_SECRET on server)
+// DEV quick key (same site function)
 const btnDev = document.getElementById('btnDev');
 btnDev && (btnDev.onclick = async () => {
   const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?');
