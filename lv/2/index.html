@@ -1,33 +1,39 @@
 <!doctype html><meta charset="utf-8">
 <style>
-  body{margin:0;background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;display:grid;place-items:center;min-height:100vh}
-  .box{background:#121a2b;border:1px solid #26314f;border-radius:14px;padding:22px;max-width:520px}
-  .muted{color:#9aa3b2}
-  .ok{color:#56e39f}
+  body{margin:0;font-family:system-ui,Arial;background:#0b1220;color:#e8ecf4;display:grid;place-items:center;height:100vh}
+  .card{background:#131b2c;padding:22px 24px;border-radius:14px;max-width:520px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .muted{color:#9aa3b2;font-size:14px}
 </style>
-<div class="box" id="box"><div class="muted">Checking step 2…</div></div>
+<div class="card">
+  <b>Verifying step 2…</b>
+  <div id="msg" class="muted">Please wait (hash check)…</div>
+</div>
 <script>
 (async function(){
-  const box = document.getElementById('box');
-  const u = new URL(location.href);
-  const hash = u.searchParams.get('hash') || '';
-  const hwid = u.searchParams.get('hwid') || '';
-  if (!hash){
-    box.innerHTML = '<div class="muted">Missing Linkvertise hash.<br/>Open the link from the portal.</div><p><a href="/" style="color:#8ad2ff">Back to portal</a></p>';
+  const params = new URLSearchParams(location.search);
+  const hash = params.get("hash");
+  const hwid = localStorage.getItem("hwid") || params.get("hwid") || "";
+  const msg = document.getElementById("msg");
+
+  if (!hash || hash.length !== 64) {
+    msg.textContent = "Missing Linkvertise hash. Open the link again from the portal.";
     return;
   }
-  try{
-    const r = await fetch('/.netlify/functions/lv-verify?step=2&hash='+encodeURIComponent(hash)+'&hwid='+encodeURIComponent(hwid));
+
+  try {
+    const r = await fetch(`/.netlify/functions/lv-verify?step=2&hash=${encodeURIComponent(hash)}`, { method:"POST" });
     const d = await r.json();
-    if (d.ok){
-      try{ localStorage.setItem('lv2','1'); if(d.hwid) localStorage.setItem('hwid', d.hwid); }catch(_){}
-      box.innerHTML = '<div class="ok">Step 2 completed. Redirecting…</div>';
-      setTimeout(()=>{ location.replace('/?lv=2'+(d.hwid?('&hwid='+encodeURIComponent(d.hwid)):'')); }, 600);
-    } else {
-      box.innerHTML = '<div class="muted">Verification failed: '+(d.error||'unknown')+'</div><p><a href="/" style="color:#8ad2ff">Back to portal</a></p>';
+    if (d.ok) {
+      try{ localStorage.setItem("lv2","1"); }catch(_){}
+      const qs = [];
+      if (hwid) qs.push("hwid="+encodeURIComponent(hwid));
+      qs.push("lv=2");
+      location.replace("/" + (qs.length?("?"+qs.join("&")):""));
+      return;
     }
-  }catch(e){
-    box.innerHTML = '<div class="muted">Network error.</div><p><a href="/" style="color:#8ad2ff">Back to portal</a></p>';
+    msg.textContent = "Verification failed. Try the step again.";
+  } catch(e){
+    msg.textContent = "Network error. Try again.";
   }
 })();
 </script>
