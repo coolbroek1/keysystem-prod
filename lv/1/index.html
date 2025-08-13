@@ -1,39 +1,27 @@
 <!doctype html><meta charset="utf-8">
-<style>
-  body{margin:0;font-family:system-ui,Arial;background:#0b1220;color:#e8ecf4;display:grid;place-items:center;height:100vh}
-  .card{background:#131b2c;padding:22px 24px;border-radius:14px;max-width:520px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  .muted{color:#9aa3b2;font-size:14px}
-</style>
-<div class="card">
-  <b>Verifying step 1…</b>
-  <div id="msg" class="muted">Please wait (hash check)…</div>
-</div>
+<title>Verify Step 1</title>
+<style>body{background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;padding:30px} .muted{color:#9aa3b2}</style>
+<div id="out" class="muted">Verifying step 1…</div>
 <script>
 (async function(){
-  const params = new URLSearchParams(location.search);
-  const hash = params.get("hash");
-  const hwid = localStorage.getItem("hwid") || params.get("hwid") || "";
-  const msg = document.getElementById("msg");
+  const out = document.getElementById('out');
+  const u = new URL(location.href);
+  const hash = u.searchParams.get('hash');
+  const hwid = u.searchParams.get('hwid') || '';
+  if (!hash){ out.textContent = 'Missing Linkvertise hash. Open the link again from the portal.'; return; }
 
-  if (!hash || hash.length !== 64) {
-    msg.textContent = "Missing Linkvertise hash. Open the link again from the portal.";
-    return;
-  }
-
-  try {
-    const r = await fetch(`/.netlify/functions/lv-verify?step=1&hash=${encodeURIComponent(hash)}`, { method:"POST" });
+  try{
+    const r = await fetch('/.netlify/functions/lv-verify?step=1&hash='+encodeURIComponent(hash)+(hwid?('&hwid='+encodeURIComponent(hwid)):''));
     const d = await r.json();
-    if (d.ok) {
-      try{ localStorage.setItem("lv1","1"); }catch(_){}
-      const qs = [];
-      if (hwid) qs.push("hwid="+encodeURIComponent(hwid));
-      qs.push("lv=1");
-      location.replace("/" + (qs.length?("?"+qs.join("&")):""));
-      return;
+    if (d.ok){
+      try{ localStorage.setItem('lv1','1'); if(hwid) localStorage.setItem('hwid', hwid); }catch(_){}
+      out.textContent = 'Step 1 verified. Redirecting…';
+      setTimeout(()=>location.replace('/'), 500);
+    } else {
+      out.textContent = 'Verification failed (step 1). Please complete the Linkvertise step again.';
     }
-    msg.textContent = "Verification failed. Try the step again.";
   } catch(e){
-    msg.textContent = "Network error. Try again.";
+    out.textContent = 'Network error while verifying. Try again.';
   }
 })();
 </script>
