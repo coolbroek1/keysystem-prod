@@ -1,27 +1,43 @@
 <!doctype html><meta charset="utf-8">
-<title>Verify Step 2</title>
-<style>body{background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;padding:30px} .muted{color:#9aa3b2}</style>
-<div id="out" class="muted">Verifying step 2…</div>
+<style>
+  body{margin:0;font-family:Inter,system-ui,Arial;background:#0b1220;color:#e8ecf4;display:grid;place-items:center;min-height:100vh}
+  .card{background:#131b2c;border-radius:16px;padding:28px;max-width:640px;width:calc(100% - 24px);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .ok{color:#56e39f}.err{color:#ff8c8c}.muted{color:#9aa3b2}
+  button{margin-top:14px;padding:10px 14px;border-radius:10px;border:1px solid #2a3553;background:#182139;color:#dfe7ff;cursor:pointer}
+</style>
+<div class="card" id="box">Verifying step 2…</div>
 <script>
 (async function(){
-  const out = document.getElementById('out');
-  const u = new URL(location.href);
-  const hash = u.searchParams.get('hash');
-  const hwid = u.searchParams.get('hwid') || '';
-  if (!hash){ out.textContent = 'Missing Linkvertise hash. Open the link again from the portal.'; return; }
+  const box = document.getElementById('box');
+  const u   = new URL(location.href);
+  const hwid= u.searchParams.get('hwid') || '';
+  const hash= u.searchParams.get('hash') || '';
+  const ref = document.referrer || '';
+
+  if(!hash){
+    box.innerHTML = '<div class="err">Missing Linkvertise hash.</div><div class="muted">Open the link again from the portal.</div>';
+    return;
+  }
 
   try{
-    const r = await fetch('/.netlify/functions/lv-verify?step=2&hash='+encodeURIComponent(hash)+(hwid?('&hwid='+encodeURIComponent(hwid)):''));
+    const r = await fetch('/.netlify/functions/lv-verify',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ step:'2', hash, hwid, ref })
+    });
     const d = await r.json();
-    if (d.ok){
-      try{ localStorage.setItem('lv2','1'); if(hwid) localStorage.setItem('hwid', hwid); }catch(_){}
-      out.textContent = 'Step 2 verified. Redirecting…';
-      setTimeout(()=>location.replace('/'), 500);
-    } else {
-      out.textContent = 'Verification failed (step 2). Please complete the Linkvertise step again.';
+    if(d.ok){
+      try{ localStorage.setItem('lv2','1'); if(hwid) localStorage.setItem('hwid',hwid); }catch(_){}
+      const qs = []; if(hwid) qs.push('hwid='+encodeURIComponent(hwid)); qs.push('lv=2');
+      location.replace('/?'+qs.join('&'));
+    }else if(d.error==='bypass_detected'){
+      box.innerHTML = '<div class="err">Bypass detected.</div><div class="muted">Please finish the Linkvertise steps normally.</div><button onclick="history.back()">Go back</button>';
+    }else if(d.error==='missing_hash'){
+      box.innerHTML = '<div class="err">Missing Linkvertise hash.</div><div class="muted">Open the link again from the portal.</div>';
+    }else{
+      box.innerHTML = '<div class="err">Could not verify.</div><div class="muted">Error: '+String(d.error||'unknown')+'</div>';
     }
-  } catch(e){
-    out.textContent = 'Network error while verifying. Try again.';
+  }catch(e){
+    box.innerHTML = '<div class="err">Network error.</div><div class="muted">'+String(e)+'</div>';
   }
 })();
 </script>
