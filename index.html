@@ -24,7 +24,6 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
 .hint{font-size:12px;color:var(--muted)}
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:50}
 .modal .box{background:#131b2c;border:1px solid #283455;padding:18px 22px;border-radius:12px;min-width:240px;text-align:center}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#0f1726;border:1px solid #243156;color:#9aa3b2;font-size:12px}
 </style>
 </head>
 <body>
@@ -51,7 +50,6 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
         <button id="btnGet" class="btn blue" disabled>Get Key</button>
         <div class="hint" id="hint">by Ezyscript❤️</div>
       </div>
-      <div class="badge">Local progress only</div>
     </div>
   </div>
 </div>
@@ -62,14 +60,13 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
 </div></div>
 
 <script>
-const PROXY = "/.netlify/functions/keyproxy";
-const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
-const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
+const PROXY="/.netlify/functions/keyproxy";
+const STEP1="https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2="https://link-hub.net/1380626/bouVTQdnXmmi";
 
-let token = null;
-window.onTurnstile = t => { token = t; refresh(); };
+let token=null; window.onTurnstile=t=>{ token=t; refresh(); };
 
-function setLv(n){ localStorage.setItem('lv'+n, '1'); }
+function setLv(n){ localStorage.setItem('lv'+n,'1'); }
 function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
 function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
 function getActive(){ const k=localStorage.getItem('activeKey'); const e=Number(localStorage.getItem('activeKeyExp')||0); if(!k||!e||Date.now()>e) return null; return {key:k,expiresAt:e}; }
@@ -99,34 +96,37 @@ function refresh(){
   const {s1,s2}=flags(); const done=(s1?1:0)+(s2?1:0);
   document.getElementById('progLabel').textContent = `${done}/2`;
   document.getElementById('progBar').style.width = `${(done/2)*100}%`;
-  const hasActive = !!getActive();
+  const hasActive=!!getActive();
   document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&!!token);
   document.getElementById('hint').textContent = !!token ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-(function init(){ const local=getActive(); if(local) renderKeyCard(local); refresh(); window.addEventListener('focus', refresh); })();
-
-document.getElementById('btnStart').onclick = () => {
-  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if(!hwid) return;
-  localStorage.setItem('hwid', hwid);
-  const { s1,s2 } = flags();
-  window.open(s1 ? STEP2 : STEP1, '_blank');
-};
-
-const wait = document.getElementById('wait');
-document.getElementById('btnGet').onclick = async () => {
-  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
+async function syncWithServer(){
+  const hwid=localStorage.getItem('hwid'); if(!hwid) return;
   try{
-    wait.style.display='flex';
-    document.getElementById('btnGet').disabled=true;
-    const r = await fetch(PROXY,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'request_key', hwid, turnstileToken: token })
-    });
-    const d = await r.json();
-    if(d.ok&&d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
+    const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid})});
+    const d=await r.json();
+    if(d.ok&&d.key){
+      const k={key:d.key,expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k);
+    }
+    refresh();
+  }catch(_){}
+}
+
+(function init(){ const local=getActive(); if(local) renderKeyCard(local); refresh(); window.addEventListener('focus', refresh); syncWithServer(); })();
+
+btnStart.onclick=()=>{ const hwid=localStorage.getItem('hwid')||prompt('Enter your HWID (from Roblox):'); if(!hwid) return; localStorage.setItem('hwid',hwid); const {s1,s2}=flags(); window.open(s1?STEP2:STEP1,'_blank'); };
+
+const wait=document.getElementById('wait');
+btnGet.onclick=async()=>{
+  const hwid=localStorage.getItem('hwid')||prompt('Enter your HWID (from Roblox):'); if(!hwid) return;
+  try{
+    wait.style.display='flex'; btnGet.disabled=true;
+    const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request_key', hwid, turnstileToken: token})});
+    const d=await r.json();
+    if(d.ok&&d.key){ const k={key:d.key,expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); refresh(); }
     else alert('Error: '+(d.error||'unknown'));
-  } finally { document.getElementById('btnGet').disabled=false; wait.style.display='none'; }
+  } finally { btnGet.disabled=false; wait.style.display='none'; }
 };
 </script>
 </body>
