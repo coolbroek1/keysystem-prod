@@ -2,65 +2,95 @@
 <meta charset="utf-8">
 <title>Admin</title>
 <style>
-body{font-family:Inter,system-ui,Arial;background:#0b1220;color:#e8ecf4;margin:0}
-.wrap{max-width:840px;margin:60px auto;padding:0 18px}
-.card{background:#131b2c;border:1px solid #27324f;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
-input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
-button{cursor:pointer;background:#3a56f0;border-color:#3a56f0}
-button.red{background:#d94b4b;border-color:#d94b4b}
-.code{font-family:ui-monospace,Menlo,Consolas;background:#0f1726;border:1px solid #243156;padding:10px;border-radius:10px}
-.muted{color:#9aa3b2}
+  :root{--bg:#0b1220;--card:#131b2c;--muted:#9aa3b2;--text:#e8ecf4;--line:#27324f;--blue:#3a56f0;--red:#d94b4b}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial}
+  .wrap{max-width:860px;margin:60px auto;padding:0 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
+  button{cursor:pointer;background:var(--blue);border-color:var(--blue);font-weight:600}
+  button.red{background:var(--red);border-color:var(--red)}
+  .code{font-family:ui-monospace,Menlo,Consolas;background:#0f1726;border:1px solid #243156;padding:10px;border-radius:10px;white-space:pre-wrap}
+  .muted{color:var(--muted)}
 </style>
+
 <div class="wrap">
   <div class="card">
     <h2>Admin</h2>
+
     <div class="row">
-      <input id="pw" placeholder="Password (aze)" type="password">
+      <input id="pw" placeholder="Password (aze)" type="password" autocomplete="current-password">
       <button id="unlock">Unlock</button>
     </div>
+
     <div id="panel" style="display:none">
       <div class="row">
-        <input id="hwid" placeholder="HWID" style="min-width:380px">
+        <input id="hwid" placeholder="HWID" style="min-width:420px">
         <button id="lookup">Lookup</button>
         <button id="issue">Issue Key</button>
         <button id="revoke" class="red">Revoke HWID</button>
       </div>
-      <div id="out" class="code"></div>
+
+      <div id="out" class="code">–</div>
       <div class="muted" style="margin-top:8px">Times shown in Europe/Brussels.</div>
     </div>
   </div>
 </div>
+
 <script>
-const PROXY="/.netlify/functions/keyproxy";
-const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+const PROXY = "/.netlify/functions/keyproxy";
+const fmt = new Intl.DateTimeFormat('en-GB',{
+  timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit',
+  hour:'2-digit', minute:'2-digit'
+});
 
-let PASS=null;
-unlock.onclick=()=>{ if(pw.value.trim()==='aze'){ PASS='aze'; panel.style.display='block'; pw.value=''; } else alert('Wrong password'); };
-
-lookup.onclick=async()=>{
-  if(!PASS) return alert('Unlock first'); const hwid=hwid.value.trim(); if(!hwid) return;
-  out.textContent='...';
-  const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid})});
-  const d=await r.json();
-  if(d.ok) out.innerHTML='Key: <b>'+d.key+'</b><br>Expires: '+fmt.format(new Date(d.expiresAt));
-  else out.textContent='Error: '+(d.error||'unknown');
+let PASS = null;
+unlock.onclick = () => {
+  if ((pw.value||'').trim() === 'aze') { PASS='aze'; panel.style.display='block'; pw.value=''; out.textContent='Ready.'; }
+  else alert('Wrong password');
 };
 
-issue.onclick=async()=>{
-  if(!PASS) return alert('Unlock first'); const hwid=hwid.value.trim(); if(!hwid) return;
+lookup.onclick = async () => {
+  if(!PASS) return alert('Unlock first');
+  const id = (hwid.value||'').trim(); if(!id) return;
+  out.textContent='Looking up...';
+  try{
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid:id})});
+    const d = await r.json();
+    if (d.ok){
+      out.innerHTML = "Key: <b>"+d.key+"</b>\nExpires: "+fmt.format(new Date(d.expiresAt));
+    } else {
+      out.textContent = "Error: "+(d.error||'unknown');
+    }
+  }catch(e){ out.textContent = "Network error: "+e; }
+};
+
+issue.onclick = async () => {
+  if(!PASS) return alert('Unlock first');
+  const id = (hwid.value||'').trim(); if(!id) return;
   out.textContent='Issuing...';
-  const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key', hwid, adminSecret:PASS})});
-  const d=await r.json();
-  if(d.ok) out.innerHTML='NEW Key: <b>'+d.key+'</b><br>Expires: '+fmt.format(new Date(d.expiresAt));
-  else out.textContent='Error: '+(d.error||'unknown');
+  try{
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'admin_issue_key', hwid:id, adminSecret:PASS})});
+    const d = await r.json();
+    if (d.ok){
+      out.innerHTML = "NEW Key: <b>"+d.key+"</b>\nExpires: "+fmt.format(new Date(d.expiresAt));
+    } else {
+      out.textContent = "Error: "+(d.error||'unknown');
+    }
+  }catch(e){ out.textContent = "Network error: "+e; }
 };
 
-revoke.onclick=async()=>{
-  if(!PASS) return alert('Unlock first'); const hwid=hwid.value.trim(); if(!hwid) return;
+revoke.onclick = async () => {
+  if(!PASS) return alert('Unlock first');
+  const id = (hwid.value||'').trim(); if(!id) return;
   out.textContent='Revoking...';
-  const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_revoke_hwid', hwid, adminSecret:PASS})});
-  const d=await r.json();
-  out.textContent = d.ok ? 'Revoked.' : ('Error: '+(d.error||'unknown'));
+  try{
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'admin_revoke_hwid', hwid:id, adminSecret:PASS})});
+    const d = await r.json();
+    out.textContent = d.ok ? "Revoked." : ("Error: "+(d.error||'unknown'));
+  }catch(e){ out.textContent = "Network error: "+e; }
 };
 </script>
