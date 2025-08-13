@@ -2,14 +2,13 @@
 <script>
 (function(){
   try{
+    // markeer stap 1 lokaal en stuur terug naar /
+    localStorage.setItem('lv1','1');
     var u=new URL(location.href);
-    var hwid=u.searchParams.get('hwid')||localStorage.getItem('hwid')||'';
-    var hash=u.searchParams.get('hash')||'';
-    var t='/.netlify/functions/lv-verify?step=1';
-    if (hwid) t+='&hwid='+encodeURIComponent(hwid);
-    if (hash) t+='&hash='+encodeURIComponent(hash);
-    location.replace(t);
+    var hwid=u.searchParams.get('hwid');
+    var qs = hwid ? ('?hwid='+encodeURIComponent(hwid)+'&lv=1') : '?lv=1';
+    location.replace('/'+qs);
   }catch(e){ location.replace('/'); }
 })();
 </script>
-<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Verifying step 1…</body>
+<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Step 1 done. Redirecting…</body>
