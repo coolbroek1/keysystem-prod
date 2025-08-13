@@ -1,57 +1,75 @@
-<!-- (Gebruik je huidige Admin HTML; vervang alleen de <script> met dit) -->
+<!doctype html>
+<meta charset="utf-8">
+<title>Admin</title>
+<style>
+body{background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;margin:0;padding:40px}
+.card{max-width:780px;margin:0 auto;background:#131b2c;border:1px solid #283455;border-radius:14px;padding:18px 20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
+button{cursor:pointer;background:#3a56f0;border-color:#3a56f0}
+h1{margin:0 0 6px 0;font-size:18px}
+.muted{color:#9aa3b2;font-size:13px}
+pre{white-space:pre-wrap;background:#0f1726;border-radius:10px;padding:12px}
+.hidden{display:none}
+</style>
+<div class="card">
+  <h1>Admin</h1>
+  <div class="row">
+    <input id="pw" placeholder="password" type="password">
+    <button id="login">Login</button>
+  </div>
+  <div id="panel" class="hidden">
+    <div class="row">
+      <input id="hwid" placeholder="HWID" style="min-width:320px">
+      <button id="lookup">Lookup</button>
+      <button id="issue">Issue Key</button>
+      <button id="reset" style="background:#d83d5c;border-color:#d83d5c">Reset HWID (keys + progress)</button>
+    </div>
+    <pre id="out"></pre>
+  </div>
+</div>
 <script>
 const PROXY    = "/.netlify/functions/keyproxy";
 const ADMINAPI = "/.netlify/functions/admin-api";
 const fmt = new Intl.DateTimeFormat('en-GB',{ timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-
 let authed = false;
-login.onclick = () => {
-  authed = (pw.value === 'aze');
-  panel.style.display = authed ? 'block' : 'none';
-};
+
+login.onclick = () => { authed = (pw.value==='aze'); panel.classList.toggle('hidden', !authed); };
 
 function show(o){
-  if (!o) { out.innerHTML = ''; return; }
-  if (o.ok && o.key) {
+  if (!o){ out.textContent=''; return; }
+  if (o.ok && o.key){
     out.textContent = `OK
 key: ${o.key}
 expires: ${fmt.format(new Date(o.expiresAt))}`;
-  } else if (o.ok && typeof o.removed === 'number') {
-    const h = (hwid.value||'').trim();
-    const portal = `https://timely-biscochitos-88e2f6.netlify.app/?hwid=${encodeURIComponent(h)}`;
-    const purge  = `${portal}&purge=1`;
-    out.innerHTML = `OK — removed ${o.removed} keys
-\nSend this to user to clear local flags:
-${purge}
-\nPortal (no purge):
-${portal}
-\n<button id="cp1">Copy purge link</button> <button id="cp2">Copy portal link</button>`;
-    setTimeout(()=>{
-      const cp1 = document.getElementById('cp1');
-      const cp2 = document.getElementById('cp2');
-      cp1 && (cp1.onclick = ()=>navigator.clipboard.writeText(purge));
-      cp2 && (cp2.onclick = ()=>navigator.clipboard.writeText(portal));
-    }, 0);
+  } else if (o.ok && typeof o.removed === 'number'){
+    out.textContent = `OK — removed ${o.removed} key(s) & cleared progress`;
+  } else if (o.ok && o.s1 !== undefined){
+    out.textContent = `progress: ${o.s1?1:0}/${o.s2?2:1}`;
   } else {
-    out.textContent = JSON.stringify(o, null, 2);
+    out.textContent = JSON.stringify(o,null,2);
   }
 }
 
 lookup.onclick = async () => {
-  const h = hwid.value.trim(); if(!h) return;
-  const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid:h})});
-  show(await r.json());
+  const h = hwid.value.trim(); if(!h || !authed) return;
+  const [r1,r2] = await Promise.all([
+    fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid:h})}),
+    fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'progress_get',hwid:h})})
+  ]);
+  const d1 = await r1.json(); const d2 = await r2.json();
+  show(d1.ok?d1:d1); if(d2.ok){ out.textContent += `\nprogress: ${(d2.s1?1:0)+(d2.s2?1:0)}/2`; }
 };
 
 issue.onclick = async () => {
-  const h = hwid.value.trim(); if(!h) return;
+  const h = hwid.value.trim(); if(!h || !authed) return;
   const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key',hwid:h,pass:'aze'})});
   show(await r.json());
 };
 
 reset.onclick = async () => {
-  const h = hwid.value.trim(); if(!h) return;
-  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid_and_purge',hwid:h,pass:'aze'})});
+  const h = hwid.value.trim(); if(!h || !authed) return;
+  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid',hwid:h,pass:'aze'})});
   show(await r.json());
 };
 </script>
