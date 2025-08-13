@@ -3,7 +3,7 @@
 (function(){
   try{
     var u=new URL(location.href);
-    var hwid=u.searchParams.get('hwid')||'';
+    var hwid=u.searchParams.get('hwid')||localStorage.getItem('hwid')||'';
     var hash=u.searchParams.get('hash')||'';
     var t='/.netlify/functions/lv-verify?step=1';
     if (hwid) t+='&hwid='+encodeURIComponent(hwid);
