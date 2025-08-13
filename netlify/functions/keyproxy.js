@@ -1,4 +1,3 @@
-// netlify/functions/keyproxy.js
 exports.handler = async (event) => {
   try {
     const APPS_EXEC = process.env.APPS_EXEC;
@@ -6,8 +5,7 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === 'OPTIONS') return resp(200, {});
 
-    // GET passthrough (voor Roblox GET-validator)
-    if (event.httpMethod === 'GET') {
+    if (event.httpMethod === 'GET') { // Roblox GET
       const qs = event.queryStringParameters || {};
       const url = APPS_EXEC + '?' + toQS(qs);
       const r = await fetch(url, { method: 'GET' });
@@ -15,7 +13,6 @@ exports.handler = async (event) => {
       return resp(r.ok ? 200 : 500, text, true);
     }
 
-    // POST passthrough (voor portal fetch)
     if (event.httpMethod !== 'POST') return resp(405, { ok:false, error:'method_not_allowed' });
 
     const ct = (event.headers['content-type'] || event.headers['Content-Type'] || '').toLowerCase();
