@@ -4,42 +4,75 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Key Portal</title>
+  <!-- Cloudflare Turnstile -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
-    :root{ --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66; }
+    :root{
+      --bg:#0b1220; --card:#131b2c; --cardTop:#121a2b; --muted:#9aa3b2;
+      --text:#e8ecf4; --line:#1e2a44; --accent:#0bd28a; --blue:#3a56f0; --green:#1aaf66;
+    }
     *{box-sizing:border-box}
-    body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh}
+    body{
+      margin:0; font-family:Inter, system-ui, Arial; color:var(--text);
+      background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); min-height:100vh
+    }
     .wrap{max-width:1080px; margin:80px auto; padding:0 18px}
     .card{background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden}
+
+    /* Header */
     .head{padding:20px 22px; background:var(--cardTop); display:flex; align-items:center; justify-content:space-between; gap:12px}
     h1{font-size:18px; margin:0}
     .muted{color:var(--muted); font-size:13px}
-    .keyrow{padding:22px}
-    .key{font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726; border-radius:10px; display:inline-block; word-break:break-all}
-    .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
+
+    /* Progress bar */
     .barwrap{display:flex; align-items:center; gap:16px}
     .barlbl{min-width:70px}
     .bar{height:6px; width:180px; background:#0f1726; border-radius:999px; overflow:hidden}
     .bar>span{display:block; height:100%; width:0%; background:var(--accent); transition:width .2s ease}
-    .footer{display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px; border-top:1px solid var(--line); flex-wrap:wrap}
-    .btn{padding:10px 16px; border-radius:10px; border:1px solid #2a3553; cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600; transition:transform .06s ease, opacity .2s}
+
+    /* Body */
+    .keyrow{padding:22px}
+    .key{
+      font-family:ui-monospace, Menlo, Consolas; padding:10px 12px; background:#0f1726;
+      border-radius:10px; display:inline-block; word-break:break-all
+    }
+    .pill{padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px; margin-left:10px}
+
+    /* Footer */
+    .footer{
+      display:flex; justify-content:space-between; align-items:center; gap:16px;
+      padding:22px; border-top:1px solid var(--line); flex-wrap:wrap
+    }
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+
+    /* Buttons */
+    .btn{
+      padding:10px 16px; border-radius:10px; border:1px solid #2a3553;
+      cursor:pointer; background:#182139; color:#dfe7ff; font-weight:600;
+      transition:transform .06s ease, opacity .2s
+    }
     .btn:active{transform:translateY(1px)}
     .btn.green{background:var(--green); border-color:var(--green); color:#fff}
     .btn.blue{background:var(--blue); border-color:var(--blue); color:#fff}
     .btn[disabled]{opacity:.55; cursor:not-allowed}
-    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
     .brand{font-size:12px; color:#8ad2ff}
-    /* modal */
+
+    /* Modal */
     .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:9999}
     .modal.show{display:flex}
     .modal .box{background:#111829; border:1px solid #2a3553; padding:22px 26px; border-radius:14px; min-width:260px; text-align:center}
     .spinner{width:26px; height:26px; border-radius:50%; border:3px solid #2a3553; border-top-color:#6aa3ff; margin:0 auto 12px; animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Info line */
+    .small{font-size:12px; color:#96a1b6}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
+
+      <!-- Header -->
       <div class="head">
         <div>
           <h1>Key</h1>
@@ -51,22 +84,25 @@
         <button id="btnStart" class="btn green">⎘ START</button>
       </div>
 
+      <!-- Key row -->
       <div class="keyrow">
         <div id="keyRow" class="muted">No key yet. Finish both steps and click <b>Get Key</b>.</div>
       </div>
 
+      <!-- Footer -->
       <div class="footer">
         <div class="row">
           <div id="cf" class="cf-turnstile" data-sitekey="0x4AAAAAABqkj0VWX1D2cl4e" data-callback="onTurnstile"></div>
           <button id="btnGet" class="btn blue" disabled>Get Key</button>
           <div class="brand">by Ezyscript❤️</div>
         </div>
-        <div class="muted">HWID is captured from your Roblox link.</div>
+        <div class="small">Your HWID is captured from the Roblox link.</div>
       </div>
+
     </div>
   </div>
 
-  <!-- Generating overlay -->
+  <!-- Generating modal -->
   <div id="modal" class="modal" role="dialog" aria-modal="true">
     <div class="box">
       <div class="spinner"></div>
@@ -75,16 +111,22 @@
   </div>
 
 <script>
-/*** CONFIG ***/
-const PROXY  = "/.netlify/functions/keyproxy";
+/* =========================
+   CONFIG
+========================= */
+const PROXY  = "/.netlify/functions/keyproxy"; // Netlify function → Apps Script
 const STEP1  = "https://link-hub.net/1380626/oXYyD2XlP2qW";
 const STEP2  = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
-/*** STATE ***/
+/* =========================
+   TURNSTILE
+========================= */
 let token = null;
 window.onTurnstile = t => { token = t; refresh(); };
 
-/*** LOCAL STORAGE HELPERS ***/
+/* =========================
+   LOCAL STORAGE HELPERS
+========================= */
 function setLv(n){ localStorage.setItem('lv'+n, '1'); }
 function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
 function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
@@ -100,40 +142,53 @@ function setActive(k){
   localStorage.setItem('activeKey', k.key);
   localStorage.setItem('activeKeyExp', String(k.expiresAt));
 }
-function clearAllLocal(){ setActive(null); clearLv(); }
-function clearKeyOnly(){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); }
+function clearKeyOnly(){
+  localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp');
+}
 
-/*** URL CAPTURE + CLEAN ***/
+/* =========================
+   CAPTURE RETURN FROM LV
+   (supports ?lv=, ?step=, and /lv/1 or /lv/2)
+========================= */
 (function bootstrap(){
-  const url = new URL(location.href);
+  const url  = new URL(location.href);
   const hwid = url.searchParams.get('hwid');
-  const lvQ  = url.searchParams.get('lv');
+  const lv   = url.searchParams.get('lv');
+  const step = url.searchParams.get('step');
+  const m    = location.pathname.match(/\/lv\/(1|2)\/?$/);
 
-  // ook /lv/1 en /lv/2 accepteren (fallback als je targets zo staan)
-  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
-  if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
-
-  if (lvQ==='1') setLv(1);
-  if (lvQ==='2') setLv(2);
+  if (lv==='1' || step==='1' || (m && m[1]==='1')) setLv(1);
+  if (lv==='2' || step==='2' || (m && m[1]==='2')) setLv(2);
   if (hwid) localStorage.setItem('hwid', hwid);
 
-  if (hwid || lvQ || m) {
-    history.replaceState({}, '', '/'); // clean URL
-  }
+  if (hwid || lv || step || m) history.replaceState({}, '', '/');
 })();
 
-/*** UI HELPERS ***/
-function fmtLeft(exp){ const ms = Math.max(0, exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
+/* =========================
+   UI RENDER
+========================= */
+function fmtLeft(exp){
+  const ms = Math.max(0, exp-Date.now());
+  const h = Math.floor(ms/3.6e6), m = Math.floor((ms%3.6e6)/6e4);
+  return `${h}h ${m}m`;
+}
 function renderKeyCard(k){
   const row=document.getElementById('keyRow');
-  if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
+  if(!k){
+    row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.';
+    return;
+  }
   const left=fmtLeft(k.expiresAt);
-  row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
+  row.innerHTML =
+    `<span class="key">${k.key}</span>`+
+    `<span class="pill">Active · ${left} left</span>`+
+    ` <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
   document.getElementById('copyBtn').onclick=()=>navigator.clipboard.writeText(k.key);
 }
+
 function refresh(){
   const { s1,s2 } = flags();
-  const prog=(s1?1:0)+(s2?1:0);
+  const prog = (s1?1:0)+(s2?1:0);
   document.getElementById('progLabel').textContent = `${prog}/2`;
   document.getElementById('progBar').style.width = `${(prog/2)*100}%`;
   const hasActive = !!getActive();
@@ -141,70 +196,78 @@ function refresh(){
   document.getElementById('btnGet').disabled = hasActive || !(s1&&s2&&cfOk);
 }
 
-/*** SERVER SYNC — wis ALLEEN key, nooit progress ***/
+/* =========================
+   SERVER SYNC (key on server)
+========================= */
 async function syncWithServer(){
   const hwid = localStorage.getItem('hwid'); if(!hwid) return;
   try{
-    const r = await fetch(PROXY,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'lookup_active_key', hwid }) });
+    const r = await fetch(PROXY,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'lookup_active_key', hwid })
+    });
     const d = await r.json();
-
-    if (d.ok && d.key) {
-      const k = { key:d.key, expiresAt:d.expiresAt };
+    if (d.ok && d.key){
+      const k={key:d.key,expiresAt:d.expiresAt};
       setActive(k); renderKeyCard(k);
     } else {
-      clearKeyOnly();
-      renderKeyCard(null);
+      // no valid key server-side → drop local key
+      clearKeyOnly(); renderKeyCard(null);
     }
     refresh();
   }catch(_){}
 }
 
-/*** Admin “reset”-ping → portal wist alles en sync’t opnieuw ***/
+// luister naar admin-resets/issue (die je Admin-pagina naar localStorage kan zetten)
 window.addEventListener('storage', (e)=>{
-  if (e.key === 'serverChange' && e.newValue){
+  if (e.key==='serverChange' && e.newValue){
     try{
       const msg = JSON.parse(e.newValue);
-      if (msg && msg.type === 'reset') {
-        clearAllLocal();
-        refresh();
-        syncWithServer();
-      }
+      if (msg && msg.type==='reset'){ clearKeyOnly(); clearLv(); refresh(); syncWithServer(); }
+      if (msg && msg.type==='issued'){ syncWithServer(); }
     }catch(_){}
   }
 });
 
-/*** INIT ***/
-async function init(){
-  const local = getActive();
-  if (local) renderKeyCard(local);
+// init
+(async function init(){
+  const local=getActive();
+  if(local) renderKeyCard(local);
   refresh();
   await syncWithServer();
-}
-init();
+})();
 
-/*** ACTIONS ***/
-document.getElementById('btnStart').onclick = () => {
+/* =========================
+   HANDLERS
+========================= */
+const btnStart = document.getElementById('btnStart');
+btnStart.onclick = () => {
   const { s1,s2 } = flags();
-  window.open(s1 ? STEP2 : STEP1, '_blank'); // direct, geen delay
+  window.open(s1 ? STEP2 : STEP1, '_blank');
 };
 
 const modal = document.getElementById('modal');
-document.getElementById('btnGet').onclick = async () => {
-  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
+const btnGet = document.getElementById('btnGet');
+btnGet.onclick = async () => {
+  const hwid = localStorage.getItem('hwid') || prompt('Enter your HWID (from Roblox):');
+  if (!hwid) return;
+
   try{
-    modal.classList.add('show');
+    modal.classList.add('show'); // “Generating Key…”
     const r = await fetch(PROXY,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'request_key', hwid, turnstileToken: token })
     });
     const d = await r.json();
-    if(d.ok&&d.key){
+    if(d.ok && d.key){
       const k={key:d.key, expiresAt:d.expiresAt};
       setActive(k); renderKeyCard(k); refresh();
     } else {
       alert('Error: '+(d.error||'unknown'));
-      if (d && d.error && d.error !== 'turnstile_failed') { /* laat progress staan */ }
+      // Als server zegt expired/not_found/superseded → schoon lokaal op
+      if (d && d.error && d.error!=='turnstile_failed'){ clearKeyOnly(); refresh(); }
     }
   } finally {
     modal.classList.remove('show');
