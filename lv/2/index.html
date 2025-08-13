@@ -1,14 +1,7 @@
 <!doctype html><meta charset="utf-8">
 <script>
-(function(){
-  try{
-    // markeer stap 2 lokaal en stuur terug naar /
-    localStorage.setItem('lv2','1');
-    var u=new URL(location.href);
-    var hwid=u.searchParams.get('hwid');
-    var qs = hwid ? ('?hwid='+encodeURIComponent(hwid)+'&lv=2') : '?lv=2';
-    location.replace('/'+qs);
-  }catch(e){ location.replace('/'); }
-})();
+try{ localStorage.setItem('lv2','1'); }catch(e){}
+const u=new URL(location.href); const hwid=u.searchParams.get('hwid');
+location.replace('/' + (hwid? ('?hwid='+encodeURIComponent(hwid)+'&lv=2') : '?lv=2'));
 </script>
 <body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Step 2 done. Redirecting…</body>
