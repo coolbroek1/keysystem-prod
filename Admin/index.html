@@ -1,45 +1,7 @@
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin</title>
-<style>
-  body{background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;margin:0;padding:24px}
-  .card{background:#131b2c;border:1px solid #283455;border-radius:14px;padding:16px;max-width:880px;margin:0 auto 18px auto}
-  h1,h2{margin:0 0 12px 0}
-  input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .btn{cursor:pointer}
-  .btn.blue{background:#3a56f0;border-color:#3a56f0}
-  .btn.red{background:#e25555;border-color:#e25555}
-  .muted{color:#9aa3b2;font-size:12px}
-  code{background:#0f1726;padding:2px 6px;border-radius:6px}
-  .ok{color:#7dffaa}
-  .err{color:#ff8c8c}
-</style>
-
-<div class="card">
-  <h1>Admin</h1>
-  <div class="row">
-    <input id="pw" placeholder="password" type="password">
-    <button id="login" class="btn">Login</button>
-    <span class="muted">password = <code>aze</code></span>
-  </div>
-</div>
-
-<div class="card" id="panel" style="display:none">
-  <h2>HWID tools</h2>
-  <div class="row">
-    <input id="hwid" placeholder="HWID">
-    <button id="lookup" class="btn">Lookup</button>
-    <button id="issue" class="btn blue">Issue new key</button>
-    <button id="reset" class="btn red">Reset HWID (revoke all)</button>
-  </div>
-  <pre id="out" class="muted"></pre>
-</div>
-
+<!-- (Gebruik je huidige Admin HTML; vervang alleen de <script> met dit) -->
 <script>
-const PROXY    = "/.netlify/functions/keyproxy";   // voor lookup
-const ADMINAPI = "/.netlify/functions/admin-api";  // voor issue/reset
+const PROXY    = "/.netlify/functions/keyproxy";
+const ADMINAPI = "/.netlify/functions/admin-api";
 const fmt = new Intl.DateTimeFormat('en-GB',{ timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 
 let authed = false;
@@ -49,11 +11,27 @@ login.onclick = () => {
 };
 
 function show(o){
-  if (!o) { out.textContent = ''; return; }
+  if (!o) { out.innerHTML = ''; return; }
   if (o.ok && o.key) {
     out.textContent = `OK
 key: ${o.key}
 expires: ${fmt.format(new Date(o.expiresAt))}`;
+  } else if (o.ok && typeof o.removed === 'number') {
+    const h = (hwid.value||'').trim();
+    const portal = `https://timely-biscochitos-88e2f6.netlify.app/?hwid=${encodeURIComponent(h)}`;
+    const purge  = `${portal}&purge=1`;
+    out.innerHTML = `OK — removed ${o.removed} keys
+\nSend this to user to clear local flags:
+${purge}
+\nPortal (no purge):
+${portal}
+\n<button id="cp1">Copy purge link</button> <button id="cp2">Copy portal link</button>`;
+    setTimeout(()=>{
+      const cp1 = document.getElementById('cp1');
+      const cp2 = document.getElementById('cp2');
+      cp1 && (cp1.onclick = ()=>navigator.clipboard.writeText(purge));
+      cp2 && (cp2.onclick = ()=>navigator.clipboard.writeText(portal));
+    }, 0);
   } else {
     out.textContent = JSON.stringify(o, null, 2);
   }
