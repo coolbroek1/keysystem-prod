@@ -31,6 +31,7 @@
     .dev.show{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
     .hint{font-size:12px; color:var(--muted)}
     .brand{font-size:12px; color:#8ad2ff}
+    .danger{background:rgba(255,107,107,.15); color:#ff8c8c; border-radius:10px; padding:10px 12px; margin-top:10px; display:inline-block}
   </style>
 </head>
 <body>
@@ -49,6 +50,7 @@
 
       <div class="keyrow">
         <div id="keyRow" class="muted">No key yet. Finish both steps and click <b>Get Key</b>.</div>
+        <div id="bypassMsg" style="display:none" class="danger">Bypass detected. Please complete Linkvertise normally.</div>
       </div>
 
       <div class="footer">
@@ -71,8 +73,9 @@
 /*** CONFIG ***/
 const PROXY   = "/.netlify/functions/keyproxy";
 const DEVISSUE= "/.netlify/functions/dev-issue";
-const STEP1   = "https://link-hub.net/1380626/oXYyD2XlP2qW";   // jouw Linkvertise link 1 (target → /lv/1)
-const STEP2   = "https://link-hub.net/1380626/bouVTQdnXmmi";   // jouw Linkvertise link 2 (target → /lv/2)
+const LVVERIFY= "/.netlify/functions/lv-verify";
+const STEP1   = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2   = "https://link-hub.net/1380626/bouVTQdnXmmi";
 
 /*** STATE ***/
 let token = null;
@@ -82,58 +85,11 @@ window.onTurnstile = t => { token = t; refresh(); };
 function setLv(n){ localStorage.setItem('lv'+n, '1'); }
 function clearLv(){ ['lv1','lv2'].forEach(k=>localStorage.removeItem(k)); }
 function flags(){ return { s1: localStorage.getItem('lv1')==='1', s2: localStorage.getItem('lv2')==='1' }; }
-function getActive(){
-  const k = localStorage.getItem('activeKey');
-  const e = Number(localStorage.getItem('activeKeyExp') || 0);
-  if (!k || !e || Date.now()>e) return null;
-  return { key:k, expiresAt:e };
-}
-function setActive(k){
-  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
-  localStorage.setItem('activeKey', k.key);
-  localStorage.setItem('activeKeyExp', String(k.expiresAt));
-}
-function clearAllLocal(){
-  setActive(null);
-  clearLv();
-  // HWID laten staan
-}
-
-/*** URL CAPTURE + PURGE ***/
-(function bootstrap(){
-  const url   = new URL(location.href);
-  const hwid  = url.searchParams.get('hwid');
-  const lvQ   = url.searchParams.get('lv');
-  const purge = url.searchParams.get('purge');
-
-  // accepteer ook /lv/1 en /lv/2 (handig als iemand daar direct terecht komt)
-  const m = location.pathname.match(/\/lv\/(1|2)\/?$/);
-  if (m) { if(m[1]==='1') setLv(1); if(m[1]==='2') setLv(2); }
-
-  if (lvQ==='1') setLv(1);
-  if (lvQ==='2') setLv(2);
-  if (hwid) localStorage.setItem('hwid', hwid);
-  if (purge==='1'){ clearAllLocal(); }
-
-  if (hwid || lvQ || m || purge) {
-    history.replaceState({}, '', '/'); // maak URL weer clean
-  }
-})();
-
-/*** DEV TOGGLE ***/
-window.addEventListener('keydown', (e)=>{
-  if (e.altKey && (e.key==='d' || e.key==='D')){
-    const v = localStorage.getItem('dev')==='1' ? '0' : '1';
-    localStorage.setItem('dev', v);
-    document.getElementById('devbar').classList.toggle('show', v==='1');
-  }
-});
-const qs = new URL(location.href).searchParams;
-if (qs.get('dev')==='1') localStorage.setItem('dev','1');
-document.getElementById('devbar').classList.toggle('show', localStorage.getItem('dev')==='1');
+function getActive(){ const k=localStorage.getItem('activeKey'); const e=Number(localStorage.getItem('activeKeyExp')||0); if(!k||!e||Date.now()>e) return null; return {key:k,expiresAt:e}; }
+function setActive(k){ if(!k){localStorage.removeItem('activeKey');localStorage.removeItem('activeKeyExp');return;} localStorage.setItem('activeKey',k.key); localStorage.setItem('activeKeyExp',String(k.expiresAt)); }
 
 /*** UI HELPERS ***/
-function fmtLeft(exp){ const ms = Math.max(0, exp-Date.now()); const h=Math.floor(ms/3.6e6), m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
+function fmtLeft(exp){ const ms=Math.max(0,exp-Date.now()); const h=Math.floor(ms/3.6e6),m=Math.floor((ms%3.6e6)/6e4); return `${h}h ${m}m`; }
 function renderKeyCard(k){
   const row=document.getElementById('keyRow');
   if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
@@ -152,16 +108,12 @@ function refresh(){
   document.getElementById('hint').textContent = cfOk ? 'by Ezyscript❤️' : 'Complete Turnstile (disable adblock if needed)';
 }
 
-/*** SERVER SYNC — zorgt dat site gelijk loopt met backend (na resets/issue) ***/
+/*** SERVER SYNC (FIXED — do NOT clear progress flags anymore) ***/
 async function syncWithServer(){
   const hwid = localStorage.getItem('hwid');
   if (!hwid) return;
   try{
-    const r = await fetch(PROXY,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'lookup_active_key', hwid })
-    });
+    const r = await fetch(PROXY,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'lookup_active_key', hwid }) });
     const d = await r.json();
     if (d.ok && d.key){
       const local = getActive();
@@ -170,18 +122,72 @@ async function syncWithServer(){
         setActive(k); renderKeyCard(k);
       }
     } else {
-      clearAllLocal();
+      // IMPORTANT CHANGE:
+      // previously we did: clearAllLocal(); which nuked lv1/lv2.
+      // Now we only forget the key, NEVER the progress.
+      setActive(null);
       renderKeyCard(null);
     }
     refresh();
   }catch(_){}
 }
 
+/*** FALLBACK ANTI-BYPASS (/?step=1&hash=...) ***/
+async function maybeVerifyInIndex(){
+  const u = new URL(location.href);
+  const step = u.searchParams.get('step');
+  const hash = u.searchParams.get('hash');
+  const hwid = u.searchParams.get('hwid');
+  if (hwid) localStorage.setItem('hwid', hwid);
+  if (!step || !hash) return;
+
+  try{
+    const ref = document.referrer || '';
+    const r = await fetch(LVVERIFY,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ step:String(step), hash:String(hash), hwid, ref }) });
+    const d = await r.json();
+    if (d && d.ok){
+      if (step==='1') setLv(1);
+      if (step==='2') setLv(2);
+      // clean URL
+      history.replaceState({}, '', '/');
+      refresh();
+    } else {
+      document.getElementById('bypassMsg').style.display='inline-block';
+      history.replaceState({}, '', '/');
+      refresh();
+    }
+  }catch(_){}
+}
+
+/*** DEV TOGGLE + URL capture for hwid ***/
+(function bootstrap(){
+  const url = new URL(location.href);
+  const hwid = url.searchParams.get('hwid');
+  if (hwid) localStorage.setItem('hwid', hwid);
+  // dev bar toggle
+  window.addEventListener('keydown', (e)=>{
+    if (e.altKey && (e.key==='d' || e.key==='D')){
+      const v = localStorage.getItem('dev')==='1' ? '0' : '1';
+      localStorage.setItem('dev', v);
+      document.getElementById('devbar').classList.toggle('show', v==='1');
+    }
+  });
+  const qs = new URL(location.href).searchParams;
+  if (qs.get('dev')==='1') localStorage.setItem('dev','1');
+  document.getElementById('devbar').classList.toggle('show', localStorage.getItem('dev')==='1');
+})();
+
 /*** INIT ***/
 async function init(){
+  // Render current state
   const local = getActive();
   if (local) renderKeyCard(local);
   refresh();
+
+  // 1) handle fallback verify (if someone came via /?step=..&hash=..)
+  await maybeVerifyInIndex();
+
+  // 2) reconcile key ONLY (do not touch progress flags)
   await syncWithServer();
 }
 init();
@@ -207,14 +213,15 @@ document.getElementById('btnGet').onclick = async () => {
       setActive(k); renderKeyCard(k); refresh();
     } else {
       alert('Error: '+(d.error||'unknown'));
-      if (d && d.error && d.error !== 'turnstile_failed') { clearAllLocal(); refresh(); }
+      // do NOT clear 1/2, 2/2 here. We only remove key if it was there.
+      setActive(null); renderKeyCard(null); refresh();
     }
   } finally {
     document.getElementById('btnGet').disabled=false;
   }
 };
 
-// DEV quick key (zelfde site; gebruikt Netlify function + ADMIN_SECRET)
+// DEV quick key
 const btnDev = document.getElementById('btnDev');
 btnDev && (btnDev.onclick = async () => {
   const hwid = document.getElementById('devHwid').value.trim() || localStorage.getItem('hwid') || prompt('HWID?');
