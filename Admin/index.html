@@ -2,74 +2,65 @@
 <meta charset="utf-8">
 <title>Admin</title>
 <style>
-body{background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;margin:0;padding:40px}
-.card{max-width:780px;margin:0 auto;background:#131b2c;border:1px solid #283455;border-radius:14px;padding:18px 20px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+body{font-family:Inter,system-ui,Arial;background:#0b1220;color:#e8ecf4;margin:0}
+.wrap{max-width:840px;margin:60px auto;padding:0 18px}
+.card{background:#131b2c;border:1px solid #27324f;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
 input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
 button{cursor:pointer;background:#3a56f0;border-color:#3a56f0}
-h1{margin:0 0 6px 0;font-size:18px}
-.muted{color:#9aa3b2;font-size:13px}
-pre{white-space:pre-wrap;background:#0f1726;border-radius:10px;padding:12px}
-.hidden{display:none}
+button.red{background:#d94b4b;border-color:#d94b4b}
+.code{font-family:ui-monospace,Menlo,Consolas;background:#0f1726;border:1px solid #243156;padding:10px;border-radius:10px}
+.muted{color:#9aa3b2}
 </style>
-<div class="card">
-  <h1>Admin</h1>
-  <div class="row">
-    <input id="pw" placeholder="password" type="password">
-    <button id="login">Login</button>
-  </div>
-  <div id="panel" class="hidden">
+<div class="wrap">
+  <div class="card">
+    <h2>Admin</h2>
     <div class="row">
-      <input id="hwid" placeholder="HWID" style="min-width:320px">
-      <button id="lookup">Lookup</button>
-      <button id="issue">Issue Key</button>
-      <button id="reset" style="background:#d83d5c;border-color:#d83d5c">Reset HWID (keys + progress)</button>
+      <input id="pw" placeholder="Password (aze)" type="password">
+      <button id="unlock">Unlock</button>
     </div>
-    <pre id="out"></pre>
+    <div id="panel" style="display:none">
+      <div class="row">
+        <input id="hwid" placeholder="HWID" style="min-width:380px">
+        <button id="lookup">Lookup</button>
+        <button id="issue">Issue Key</button>
+        <button id="revoke" class="red">Revoke HWID</button>
+      </div>
+      <div id="out" class="code"></div>
+      <div class="muted" style="margin-top:8px">Times shown in Europe/Brussels.</div>
+    </div>
   </div>
 </div>
 <script>
-const PROXY    = "/.netlify/functions/keyproxy";
-const ADMINAPI = "/.netlify/functions/admin-api";
-const fmt = new Intl.DateTimeFormat('en-GB',{ timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-let authed = false;
+const PROXY="/.netlify/functions/keyproxy";
+const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Brussels',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 
-login.onclick = () => { authed = (pw.value==='aze'); panel.classList.toggle('hidden', !authed); };
+let PASS=null;
+unlock.onclick=()=>{ if(pw.value.trim()==='aze'){ PASS='aze'; panel.style.display='block'; pw.value=''; } else alert('Wrong password'); };
 
-function show(o){
-  if (!o){ out.textContent=''; return; }
-  if (o.ok && o.key){
-    out.textContent = `OK
-key: ${o.key}
-expires: ${fmt.format(new Date(o.expiresAt))}`;
-  } else if (o.ok && typeof o.removed === 'number'){
-    out.textContent = `OK — removed ${o.removed} key(s) & cleared progress`;
-  } else if (o.ok && o.s1 !== undefined){
-    out.textContent = `progress: ${o.s1?1:0}/${o.s2?2:1}`;
-  } else {
-    out.textContent = JSON.stringify(o,null,2);
-  }
-}
-
-lookup.onclick = async () => {
-  const h = hwid.value.trim(); if(!h || !authed) return;
-  const [r1,r2] = await Promise.all([
-    fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid:h})}),
-    fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'progress_get',hwid:h})})
-  ]);
-  const d1 = await r1.json(); const d2 = await r2.json();
-  show(d1.ok?d1:d1); if(d2.ok){ out.textContent += `\nprogress: ${(d2.s1?1:0)+(d2.s2?1:0)}/2`; }
+lookup.onclick=async()=>{
+  if(!PASS) return alert('Unlock first'); const hwid=hwid.value.trim(); if(!hwid) return;
+  out.textContent='...';
+  const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid})});
+  const d=await r.json();
+  if(d.ok) out.innerHTML='Key: <b>'+d.key+'</b><br>Expires: '+fmt.format(new Date(d.expiresAt));
+  else out.textContent='Error: '+(d.error||'unknown');
 };
 
-issue.onclick = async () => {
-  const h = hwid.value.trim(); if(!h || !authed) return;
-  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key',hwid:h,pass:'aze'})});
-  show(await r.json());
+issue.onclick=async()=>{
+  if(!PASS) return alert('Unlock first'); const hwid=hwid.value.trim(); if(!hwid) return;
+  out.textContent='Issuing...';
+  const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key', hwid, adminSecret:PASS})});
+  const d=await r.json();
+  if(d.ok) out.innerHTML='NEW Key: <b>'+d.key+'</b><br>Expires: '+fmt.format(new Date(d.expiresAt));
+  else out.textContent='Error: '+(d.error||'unknown');
 };
 
-reset.onclick = async () => {
-  const h = hwid.value.trim(); if(!h || !authed) return;
-  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid',hwid:h,pass:'aze'})});
-  show(await r.json());
+revoke.onclick=async()=>{
+  if(!PASS) return alert('Unlock first'); const hwid=hwid.value.trim(); if(!hwid) return;
+  out.textContent='Revoking...';
+  const r=await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_revoke_hwid', hwid, adminSecret:PASS})});
+  const d=await r.json();
+  out.textContent = d.ok ? 'Revoked.' : ('Error: '+(d.error||'unknown'));
 };
 </script>
