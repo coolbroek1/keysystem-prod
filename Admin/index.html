@@ -1,103 +1,108 @@
 <!doctype html>
-<meta charset="utf-8">
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Admin</title>
 <style>
-  :root{--bg:#0b1220;--card:#131b2c;--muted:#9aa3b2;--text:#e8ecf4;--line:#27324f;--blue:#3a56f0;--red:#d94b4b}
+  :root{ --bg:#0b1220; --card:#121a2b; --line:#243153; --text:#e8ecf4; --muted:#9aa3b2; --blue:#3a56f0; --green:#1aaf66; --red:#d9534f }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial}
-  .wrap{max-width:860px;margin:60px auto;padding:0 18px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35);padding:18px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
-  input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
-  button{cursor:pointer;background:var(--blue);border-color:var(--blue);font-weight:600}
-  button.red{background:var(--red);border-color:var(--red)}
-  .code{font-family:ui-monospace,Menlo,Consolas;background:#0f1726;border:1px solid #243156;padding:10px;border-radius:10px;white-space:pre-wrap}
-  .muted{color:var(--muted)}
+  body{margin:0; font-family:Inter, system-ui, Arial; color:var(--text); background:linear-gradient(180deg,#0b1220,#0e1628)}
+  .wrap{max-width:880px; margin:60px auto; padding:0 18px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 18px 8px}
+  h1{margin:0 0 14px 0; font-size:20px}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0}
+  input,button{padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:#0f1726; color:#dfe7ff}
+  button{cursor:pointer; background:#182139}
+  button.blue{background:var(--blue); border-color:var(--blue)}
+  button.green{background:var(--green); border-color:var(--green)}
+  button.red{background:#9b2c2c; border-color:#9b2c2c}
+  .muted{color:var(--muted); font-size:13px}
+  .out{background:#0f1726; padding:10px; border-radius:10px; font:12px ui-monospace,Menlo,Consolas; word-break:break-all}
+  .login{max-width:360px; margin:100px auto; text-align:center}
+  .hidden{display:none}
 </style>
-
+</head>
+<body>
 <div class="wrap">
-  <div class="card">
-    <h2>Admin</h2>
+  <div id="login" class="login">
+    <h1>Admin</h1>
+    <div class="row"><input id="pw" type="password" placeholder="Password" style="width:100%"></div>
+    <div class="row"><button id="enter" class="blue" style="width:100%">Enter</button></div>
+    <div class="muted">Hint: aze</div>
+  </div>
 
-    <div class="row">
-      <input id="pw" placeholder="Password (aze)" type="password" autocomplete="current-password">
-      <button id="unlock">Unlock</button>
-    </div>
-
-    <div id="panel" style="display:none">
+  <div id="app" class="hidden">
+    <div class="card">
+      <h1>Actions</h1>
+      <div class="row"><input id="hwid" placeholder="HWID" style="min-width:280px; flex:1"></div>
       <div class="row">
-        <input id="hwid" placeholder="HWID" style="min-width:420px">
-        <button id="lookup">Lookup</button>
-        <button id="issue">Issue Key</button>
-        <button id="revoke" class="red">Revoke HWID</button>
+        <button id="lookup" class="blue">Lookup Active</button>
+        <button id="issue"  class="green">Issue Key</button>
+        <button id="reset"  class="red">Reset HWID (revoke)</button>
       </div>
-
-      <div id="out" class="code">–</div>
-      <div class="muted" style="margin-top:8px">Times shown in Europe/Brussels.</div>
+      <div class="muted">Times are Europe/Brussels.</div>
+      <div id="out" class="out" style="margin-top:10px"></div>
     </div>
   </div>
 </div>
 
 <script>
-const PROXY = "/.netlify/functions/keyproxy";
-const fmt = new Intl.DateTimeFormat('en-GB',{
-  timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit',
-  hour:'2-digit', minute:'2-digit'
-});
-let PASS = null;
-function pingPortal(){ try{ localStorage.setItem('serverChange', String(Date.now())); }catch(_){} }
+const PROXY    = "/.netlify/functions/keyproxy";
+const DEVISSUE = "/.netlify/functions/dev-issue"; // uses server ADMIN_SECRET
+const TZ_FMT = new Intl.DateTimeFormat('en-GB',{ timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 
-unlock.onclick = () => {
-  if ((pw.value||'').trim() === 'aze') { PASS='aze'; panel.style.display='block'; pw.value=''; out.textContent='Ready.'; }
-  else alert('Wrong password');
+function log(o){ const el = document.getElementById('out'); el.innerText = typeof o==='string'? o : JSON.stringify(o,null,2); }
+function pingPortal(type){ try{ localStorage.setItem('serverChange', JSON.stringify({ ts: Date.now(), type: type||'reset' })); }catch(_){ } }
+
+/* login */
+enter.onclick = () => {
+  if (pw.value.trim() === 'aze'){ login.classList.add('hidden'); app.classList.remove('hidden'); }
+  else alert('Wrong password.');
 };
 
+/* lookup */
 lookup.onclick = async () => {
-  if(!PASS) return alert('Unlock first');
-  const id = (hwid.value||'').trim(); if(!id) return;
-  out.textContent='Looking up...';
+  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return alert('Enter HWID');
   try{
-    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key', hwid:id})});
+    log('Loading…');
+    const r = await fetch(PROXY,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'lookup_active_key', hwid }) });
     const d = await r.json();
-    if (d.ok){
-      out.innerHTML = "Key: <b>"+d.key+"</b>\nExpires: "+fmt.format(new Date(d.expiresAt));
-    } else {
-      out.textContent = "Error: "+(d.error||'unknown');
+    if(d.ok){
+      log({ ok:true, key:d.key, expiresAt: d.expiresAt, expiresLocal: TZ_FMT.format(new Date(d.expiresAt)) });
+    }else{
+      log(d);
     }
-  }catch(e){ out.textContent = "Network error: "+e; }
+  }catch(e){ log(String(e)); }
 };
 
+/* issue new key (revokes old on server; portal wordt via ping gereset) */
 issue.onclick = async () => {
-  if(!PASS) return alert('Unlock first');
-  const id = (hwid.value||'').trim(); if(!id) return;
-  out.textContent='Issuing...';
+  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return alert('Enter HWID');
   try{
-    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'admin_issue_key', hwid:id, adminSecret:PASS})});
+    log('Issuing…');
+    const r = await fetch(DEVISSUE,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ hwid }) });
     const d = await r.json();
-    if (d.ok){
-      out.innerHTML = "NEW Key: <b>"+d.key+"</b>\nExpires: "+fmt.format(new Date(d.expiresAt))+"\n\n(Portal will sync automatically)";
-      pingPortal();
-    } else {
-      out.textContent = "Error: "+(d.error||'unknown');
+    if(d.ok){
+      log({ ok:true, key:d.key, expiresAt: d.expiresAt, expiresLocal: TZ_FMT.format(new Date(d.expiresAt)) });
+      pingPortal('reset'); // portal: clear key+progress, resync
+    }else{
+      log(d);
     }
-  }catch(e){ out.textContent = "Network error: "+e; }
+  }catch(e){ log(String(e)); }
 };
 
-revoke.onclick = async () => {
-  if(!PASS) return alert('Unlock first');
-  const id = (hwid.value||'').trim(); if(!id) return;
-  out.textContent='Revoking...';
+/* reset HWID (revoke mapping) — requires Apps Script action admin_reset_hwid */
+reset.onclick = async () => {
+  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return alert('Enter HWID');
   try{
-    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'admin_revoke_hwid', hwid:id, adminSecret:PASS})});
+    log('Resetting…');
+    const r = await fetch(PROXY,{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'admin_reset_hwid', hwid, adminSecret:'aze' }) });
     const d = await r.json();
-    if (d.ok){
-      out.textContent = "Revoked. (Portal will reset automatically)";
-      pingPortal();
-    } else {
-      out.textContent = "Error: "+(d.error||'unknown');
-    }
-  }catch(e){ out.textContent = "Network error: "+e; }
+    log(d);
+    if(d.ok){ pingPortal('reset'); } // portal: clear key+progress, resync
+  }catch(e){ log(String(e)); }
 };
 </script>
+</body>
+</html>
