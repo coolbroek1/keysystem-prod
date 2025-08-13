@@ -16,6 +16,7 @@
   .ok{color:#7dffaa}
   .err{color:#ff8c8c}
 </style>
+
 <div class="card">
   <h1>Admin</h1>
   <div class="row">
@@ -32,51 +33,47 @@
     <button id="lookup" class="btn">Lookup</button>
     <button id="issue" class="btn blue">Issue new key</button>
     <button id="reset" class="btn red">Reset HWID (revoke all)</button>
-    <button id="openPortal" class="btn" style="display:none">Open Portal (purge)</button>
   </div>
   <pre id="out" class="muted"></pre>
 </div>
 
 <script>
-const PROXY     = "/.netlify/functions/keyproxy";
-const ADMINAPI  = "/.netlify/functions/admin-api"; // jouw bestaande admin function (zoals eerder)
+const PROXY    = "/.netlify/functions/keyproxy";   // voor lookup
+const ADMINAPI = "/.netlify/functions/admin-api";  // voor issue/reset
 const fmt = new Intl.DateTimeFormat('en-GB',{ timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 
 let authed = false;
-document.getElementById('login').onclick = () => {
-  authed = (document.getElementById('pw').value === 'aze');
-  document.getElementById('panel').style.display = authed ? 'block' : 'none';
+login.onclick = () => {
+  authed = (pw.value === 'aze');
+  panel.style.display = authed ? 'block' : 'none';
 };
 
-function show(s){ document.getElementById('out').textContent = s; }
-function lines(o){
-  if(!o) return '';
-  if(o.ok && o.key) return `OK\nkey: ${o.key}\nexpires: ${fmt.format(new Date(o.expiresAt))}`;
-  return JSON.stringify(o,null,2);
+function show(o){
+  if (!o) { out.textContent = ''; return; }
+  if (o.ok && o.key) {
+    out.textContent = `OK
+key: ${o.key}
+expires: ${fmt.format(new Date(o.expiresAt))}`;
+  } else {
+    out.textContent = JSON.stringify(o, null, 2);
+  }
 }
 
-document.getElementById('lookup').onclick = async () => {
-  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return;
-  const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid})});
-  const d = await r.json(); show(lines(d));
+lookup.onclick = async () => {
+  const h = hwid.value.trim(); if(!h) return;
+  const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid:h})});
+  show(await r.json());
 };
 
-document.getElementById('issue').onclick = async () => {
-  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return;
-  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key',hwid,pass:'aze'})});
-  const d = await r.json(); show(lines(d));
+issue.onclick = async () => {
+  const h = hwid.value.trim(); if(!h) return;
+  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key',hwid:h,pass:'aze'})});
+  show(await r.json());
 };
 
-document.getElementById('reset').onclick = async () => {
-  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return;
-  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid_and_purge',hwid,pass:'aze'})});
-  const d = await r.json();
-  show(lines(d));
-  if (d && d.ok){
-    // toon purge-knop zodat je lokaal progress wist
-    const btn = document.getElementById('openPortal');
-    btn.style.display='inline-block';
-    btn.onclick = () => window.open('/?purge=1&hwid='+encodeURIComponent(hwid),'_blank');
-  }
+reset.onclick = async () => {
+  const h = hwid.value.trim(); if(!h) return;
+  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid_and_purge',hwid:h,pass:'aze'})});
+  show(await r.json());
 };
 </script>
