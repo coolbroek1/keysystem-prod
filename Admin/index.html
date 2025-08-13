@@ -1,223 +1,82 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Admin • Key System</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin</title>
 <style>
-  :root{ --bg:#0b1220; --card:#131b2c; --muted:#9aa3b2; --text:#e8ecf4; --line:#1e2a44; --green:#1aaf66; --blue:#3a56f0; --red:#d35454; }
-  *{ box-sizing:border-box }
-  body{ margin:0; font-family:Inter,system-ui,Arial; background:linear-gradient(180deg,#0b1220,#0b1220 60%,#0e1628); color:var(--text); }
-  .wrap{ max-width:920px; margin:60px auto; padding:0 18px }
-  .card{ background:var(--card); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.35); overflow:hidden }
-  .head{ padding:20px 22px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px }
-  h1{ font-size:18px; margin:0; }
-  .muted{ color:var(--muted); font-size:13px }
-  .row{ padding:20px 22px; display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center }
-  .row > *{ min-width:0 }
-  .input{ padding:10px 12px; border-radius:10px; border:1px solid #2a3553; background:#0f1726; color:#dfe7ff; width:100% }
-  .btn{ padding:10px 14px; border-radius:10px; border:1px solid #2a3553; background:#182139; color:#dfe7ff; font-weight:600; cursor:pointer }
-  .btn[disabled]{ opacity:.55; cursor:not-allowed }
-  .btn.green{ background:var(--green); border-color:var(--green); color:#fff }
-  .btn.blue{ background:var(--blue); border-color:var(--blue); color:#fff }
-  .btn.red{ background:#9b3030; border-color:#9b3030; color:#fff }
-  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:12px }
-  .keybox{ background:#0f1726; border:1px solid #2a3553; padding:10px 12px; border-radius:10px; font:14px ui-monospace,Menlo,Consolas; word-break:break-all }
-  .note{ padding:10px 12px; font-size:13px; color:#e0e6f8 }
-  .ok{ background:rgba(46,204,113,.15); border-left:4px solid var(--green) }
-  .err{ background:rgba(255,107,107,.12); border-left:4px solid var(--red) }
-  .hide{ display:none }
-  .foot{ padding:12px 22px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between }
-  .pill{ padding:6px 10px; background:rgba(46,204,113,.15); color:#56e39f; border-radius:999px; font-size:12px }
-  a.link{ color:#84dfff; text-decoration:none; word-break:break-all }
-  /* login overlay */
-  .gate{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; }
-  .gatecard{ width:420px; background:#161e31; border-radius:14px; padding:18px; box-shadow:0 15px 50px rgba(0,0,0,.45) }
-  .center{ text-align:center }
+  body{background:#0b1220;color:#e8ecf4;font-family:Inter,system-ui,Arial;margin:0;padding:24px}
+  .card{background:#131b2c;border:1px solid #283455;border-radius:14px;padding:16px;max-width:880px;margin:0 auto 18px auto}
+  h1,h2{margin:0 0 12px 0}
+  input,button{padding:10px 12px;border-radius:10px;border:1px solid #2a3553;background:#0f1726;color:#dfe7ff}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .btn{cursor:pointer}
+  .btn.blue{background:#3a56f0;border-color:#3a56f0}
+  .btn.red{background:#e25555;border-color:#e25555}
+  .muted{color:#9aa3b2;font-size:12px}
+  code{background:#0f1726;padding:2px 6px;border-radius:6px}
+  .ok{color:#7dffaa}
+  .err{color:#ff8c8c}
 </style>
-</head>
-<body>
-<div class="wrap">
-  <div class="card">
-    <div class="head">
-      <div>
-        <h1>Admin • Key System</h1>
-        <div class="muted">Lookup, issue and reset HWIDs. Times are Europe/Brussels.</div>
-      </div>
-      <div class="muted" id="site"></div>
-    </div>
-
-    <div class="row">
-      <input id="hwid" class="input" placeholder="Enter HWID (e.g. B1532DAA-03EE-42B8-AAEE-905CDCBE7B02)" />
-      <div class="grid2">
-        <button id="btnLookup" class="btn blue">Lookup</button>
-        <button id="btnIssue"  class="btn green">Issue New Key</button>
-        <button id="btnReset"  class="btn red">Reset HWID</button>
-        <button id="btnCopy"   class="btn">Copy HWID</button>
-      </div>
-    </div>
-
-    <div id="msg" class="note hide"></div>
-
-    <div class="row">
-      <div>
-        <div class="muted">Current key</div>
-        <div id="key" class="keybox">—</div>
-      </div>
-      <div>
-        <div class="muted">Expires (Europe/Brussels)</div>
-        <div id="exp" class="keybox">—</div>
-      </div>
-    </div>
-
-    <div class="foot">
-      <div id="purgeWrap" class="hide">
-        Send user this link to clear local key & progress:
-        <a id="purgeLink" class="link" target="_blank" rel="noopener"></a>
-      </div>
-      <div>
-        <span class="pill">Secure server calls</span>
-      </div>
-    </div>
+<div class="card">
+  <h1>Admin</h1>
+  <div class="row">
+    <input id="pw" placeholder="password" type="password">
+    <button id="login" class="btn">Login</button>
+    <span class="muted">password = <code>aze</code></span>
   </div>
 </div>
 
-<!-- simple password gate -->
-<div id="gate" class="gate">
-  <div class="gatecard">
-    <h2 class="center" style="margin:6px 0 12px 0">Admin login</h2>
-    <div class="muted center" style="margin-bottom:10px">Enter password</div>
-    <input id="pw" type="password" class="input" placeholder="Password" />
-    <div style="height:10px"></div>
-    <button id="btnEnter" class="btn blue" style="width:100%">Enter</button>
-    <div id="pwErr" class="muted center" style="margin-top:10px;color:#ff9a9a"></div>
+<div class="card" id="panel" style="display:none">
+  <h2>HWID tools</h2>
+  <div class="row">
+    <input id="hwid" placeholder="HWID">
+    <button id="lookup" class="btn">Lookup</button>
+    <button id="issue" class="btn blue">Issue new key</button>
+    <button id="reset" class="btn red">Reset HWID (revoke all)</button>
+    <button id="openPortal" class="btn" style="display:none">Open Portal (purge)</button>
   </div>
+  <pre id="out" class="muted"></pre>
 </div>
 
 <script>
-  // --- endpoints ---
-  const PROXY      = "/.netlify/functions/keyproxy";     // lookup_active_key
-  const ISSUE_FUNC = "/.netlify/functions/dev-issue";    // admin_issue_key
-  const RESET_FUNC = "/.netlify/functions/admin-reset";  // admin_reset_hwid
+const PROXY     = "/.netlify/functions/keyproxy";
+const ADMINAPI  = "/.netlify/functions/admin-api"; // jouw bestaande admin function (zoals eerder)
+const fmt = new Intl.DateTimeFormat('en-GB',{ timeZone:'Europe/Brussels', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
 
-  // --- format in Belgian time ---
-  const fmt = new Intl.DateTimeFormat('en-GB',{
-    timeZone:'Europe/Brussels',
-    year:'numeric', month:'2-digit', day:'2-digit',
-    hour:'2-digit', minute:'2-digit'
-  });
-  const site = location.origin;
-  document.getElementById('site').textContent = site;
+let authed = false;
+document.getElementById('login').onclick = () => {
+  authed = (document.getElementById('pw').value === 'aze');
+  document.getElementById('panel').style.display = authed ? 'block' : 'none';
+};
 
-  // --- helpers ---
-  const $ = id => document.getElementById(id);
-  function note(text, ok=true){
-    const box = $('msg');
-    box.textContent = text;
-    box.classList.remove('hide','ok','err');
-    box.classList.add(ok?'ok':'err');
-  }
-  function clearNote(){ $('msg').classList.add('hide'); }
-  function showKey(k, exp){
-    $('key').textContent = k || '—';
-    $('exp').textContent = exp ? fmt.format(new Date(exp)) : '—';
-  }
-  function setPurge(hwid){
-    const w = $('purgeWrap'), a = $('purgeLink');
-    if(!hwid){ w.classList.add('hide'); a.textContent=''; a.removeAttribute('href'); return; }
-    const link = site + '/?hwid=' + encodeURIComponent(hwid) + '&purge=1';
-    a.textContent = link; a.href = link; w.classList.remove('hide');
-  }
-  async function jsonFetch(url, body){
-    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) });
-    const t = await r.text();
-    try{ return JSON.parse(t); }catch(_){ return { ok:false, error:'bad_json', raw:t }; }
-  }
+function show(s){ document.getElementById('out').textContent = s; }
+function lines(o){
+  if(!o) return '';
+  if(o.ok && o.key) return `OK\nkey: ${o.key}\nexpires: ${fmt.format(new Date(o.expiresAt))}`;
+  return JSON.stringify(o,null,2);
+}
 
-  // --- actions ---
-  async function doLookup(){
-    clearNote();
-    const hwid = $('hwid').value.trim(); if(!hwid) return note('Enter HWID first', false);
-    $('btnLookup').disabled = true;
-    try{
-      const d = await jsonFetch(PROXY, { action:'lookup_active_key', hwid });
-      if (d.ok){
-        showKey(d.key, d.expiresAt);
-        note('Lookup ok ✓', true);
-        setPurge(hwid);
-      } else {
-        showKey(null, null);
-        note('Lookup: '+(d.error||'unknown'), false);
-        setPurge(hwid);
-      }
-    } finally {
-      $('btnLookup').disabled = false;
-    }
-  }
+document.getElementById('lookup').onclick = async () => {
+  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return;
+  const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid})});
+  const d = await r.json(); show(lines(d));
+};
 
-  async function doIssue(){
-    clearNote();
-    const hwid = $('hwid').value.trim(); if(!hwid) return note('Enter HWID first', false);
-    $('btnIssue').disabled = true;
-    try{
-      const d = await jsonFetch(ISSUE_FUNC, { hwid });
-      if (d.ok){
-        showKey(d.key, d.expiresAt);
-        note('Issued new key ✓ (old revoked)', true);
-        setPurge(hwid); // optional: send to user to clear local cache
-      } else {
-        note('Issue failed: '+(d.error||'unknown'), false);
-      }
-    } finally {
-      $('btnIssue').disabled = false;
-    }
-  }
+document.getElementById('issue').onclick = async () => {
+  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return;
+  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_issue_key',hwid,pass:'aze'})});
+  const d = await r.json(); show(lines(d));
+};
 
-  async function doReset(){
-    clearNote();
-    const hwid = $('hwid').value.trim(); if(!hwid) return note('Enter HWID first', false);
-    if (!confirm('Reset HWID '+hwid+' ? This revokes and unmaps the key.')) return;
-    $('btnReset').disabled = true;
-    try{
-      const d = await jsonFetch(RESET_FUNC, { hwid });
-      if (d.ok){
-        showKey(null, null);
-        note('HWID reset on server ✓ — send purge link to user', true);
-        setPurge(hwid);
-      } else {
-        note('Reset failed: '+(d.error||'unknown'), false);
-      }
-    } finally {
-      $('btnReset').disabled = false;
-    }
+document.getElementById('reset').onclick = async () => {
+  const hwid = document.getElementById('hwid').value.trim(); if(!hwid) return;
+  const r = await fetch(ADMINAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'admin_reset_hwid_and_purge',hwid,pass:'aze'})});
+  const d = await r.json();
+  show(lines(d));
+  if (d && d.ok){
+    // toon purge-knop zodat je lokaal progress wist
+    const btn = document.getElementById('openPortal');
+    btn.style.display='inline-block';
+    btn.onclick = () => window.open('/?purge=1&hwid='+encodeURIComponent(hwid),'_blank');
   }
-
-  // copy HWID
-  $('btnCopy').onclick = async () => {
-    const hwid = $('hwid').value.trim(); if(!hwid) return note('Enter HWID first', false);
-    try{ await navigator.clipboard.writeText(hwid); note('HWID copied ✓'); }catch(_){ note('Clipboard blocked', false); }
-  };
-
-  // buttons
-  $('btnLookup').onclick = doLookup;
-  $('btnIssue').onclick  = doIssue;
-  $('btnReset').onclick  = doReset;
-
-  // --- very simple password gate (you asked for 'aze') ---
-  const gate = $('gate'), pw = $('pw'), btnEnter = $('btnEnter'), pwErr = $('pwErr');
-  function openIfAuthed(){
-    if (localStorage.getItem('admin_ok') === '1'){ gate.style.display='none'; return true; }
-    return false;
-  }
-  function tryLogin(){
-    if (pw.value === 'aze'){ localStorage.setItem('admin_ok','1'); gate.style.display='none'; pw.value=''; pwErr.textContent=''; }
-    else { pwErr.textContent = 'Wrong password'; }
-  }
-  if (!openIfAuthed()){
-    btnEnter.onclick = tryLogin;
-    pw.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
-  }
-
+};
 </script>
-</body>
-</html>
