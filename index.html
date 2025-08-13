@@ -51,17 +51,20 @@ h1{font-size:18px;margin:0}.muted{color:var(--muted);font-size:13px}
 <div id="wait" class="modal"><div class="box"><div style="font-weight:700;margin-bottom:6px">Generating key…</div><div class="muted">Please wait a moment.</div></div></div>
 
 <script>
+/*** CONFIG — open real Linkvertise pages on START ***/
+const STEP1 = "https://link-hub.net/1380626/oXYyD2XlP2qW";
+const STEP2 = "https://link-hub.net/1380626/bouVTQdnXmmi";
 const PROXY = "/.netlify/functions/keyproxy";
-const STEP1 = "/.netlify/functions/lv-verify?step=1";
-const STEP2 = "/.netlify/functions/lv-verify?step=2";
 
-let token = null;
-window.onTurnstile = t => { token = t; update(); };
+/*** TURNSTILE ***/
+let token = null; window.onTurnstile = t => { token = t; update(); };
 
+/*** HWID helpers ***/
 function getHWID(){ return localStorage.getItem('hwid') || ""; }
 function setHWID(h){ if(h) localStorage.setItem('hwid', h); }
 
-(function bootstrap(){
+/*** Bootstrap (capture hwid or bypass flag on return) ***/
+(function(){
   const u = new URL(location.href);
   const hwid = u.searchParams.get('hwid');
   const bypass = u.searchParams.get('bypass');
@@ -70,75 +73,65 @@ function setHWID(h){ if(h) localStorage.setItem('hwid', h); }
   if (hwid || bypass) history.replaceState({}, '', '/');
 })();
 
-function setActive(k){
-  if(!k){ localStorage.removeItem('activeKey'); localStorage.removeItem('activeKeyExp'); return; }
-  localStorage.setItem('activeKey', k.key);
-  localStorage.setItem('activeKeyExp', String(k.expiresAt));
-}
-
+/*** UI helpers ***/
 function renderKeyCard(k){
   const row=document.getElementById('keyRow');
   if(!k){ row.innerHTML='No key yet. Finish both steps and click <b>Get Key</b>.'; return;}
-  const left=(ms=>{const h=Math.floor(ms/3.6e6),m=Math.floor((ms%3.6e6)/6e4);return `${h}h ${m}m`;})(Math.max(0,k.expiresAt-Date.now()));
+  const ms = Math.max(0, k.expiresAt-Date.now());
+  const left = `${Math.floor(ms/3.6e6)}h ${Math.floor((ms%3.6e6)/6e4)}m`;
   row.innerHTML = `<span class="key">${k.key}</span><span class="pill">Active · ${left} left</span> <button id="copyBtn" class="btn" style="margin-left:10px">Copy</button>`;
   const c=document.getElementById('copyBtn'); c && (c.onclick=()=>navigator.clipboard.writeText(k.key));
 }
-
 function setProgress(p){
   const done=(p.s1?1:0)+(p.s2?1:0);
   document.getElementById('progLabel').textContent = `${done}/2`;
   document.getElementById('progBar').style.width = `${(done/2)*100}%`;
-  // Enable Get Key alleen als beide server-stappen klaar + turnstile ok
   document.getElementById('btnGet').disabled = !(p.s1 && p.s2 && !!token);
 }
 
+/*** Server calls ***/
 async function fetchProgress(){
   const hwid = getHWID(); if(!hwid) return {s1:false,s2:false};
-  try{
-    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'progress_get',hwid})});
-    const d = await r.json(); return d.ok ? {s1:!!d.s1,s2:!!d.s2} : {s1:false,s2:false};
-  }catch(_){ return {s1:false,s2:false}; }
+  const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'progress_get',hwid:hwid})});
+  const d = await r.json(); return d.ok ? {s1:!!d.s1,s2:!!d.s2} : {s1:false,s2:false};
 }
-
 async function fetchActiveFromServer(){
   const hwid = getHWID(); if(!hwid) return null;
-  try{
-    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid})});
-    const d = await r.json(); if(d.ok&&d.key) return {key:d.key, expiresAt:d.expiresAt};
-  }catch(_){}
-  return null;
+  const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'lookup_active_key',hwid:hwid})});
+  const d = await r.json(); if(d.ok&&d.key) return {key:d.key, expiresAt:d.expiresAt}; return null;
 }
 
+/*** Update whole UI ***/
 async function update(){
-  setProgress(await fetchProgress());
-  const k = await fetchActiveFromServer();
-  if (k){ setActive(k); renderKeyCard(k); }
+  const p = await fetchProgress(); setProgress(p);
+  const k = await fetchActiveFromServer(); if (k) renderKeyCard(k);
 }
 
+/*** START → open real Linkvertise (server will mark when it returns to /lv/1 or /lv/2) ***/
 document.getElementById('btnStart').onclick = async () => {
   const p = await fetchProgress();
-  const urlBase = (!p.s1 ? STEP1 : STEP2);
-  const hw = getHWID() || prompt('Enter your HWID (from Roblox):'); if(!hw){return;}
+  const target = (!p.s1 ? STEP1 : STEP2);
+  const hw = getHWID() || prompt('Enter your HWID (from Roblox):'); if(!hw) return;
   setHWID(hw);
-  const url = urlBase + '&hwid=' + encodeURIComponent(hw);
-  window.open(url, '_blank');
+  window.open(target, '_blank');
 };
 
+/*** GET KEY with “Generating…” modal ***/
 const wait = document.getElementById('wait');
 document.getElementById('btnGet').onclick = async () => {
   const hwid = getHWID() || prompt('Enter your HWID (from Roblox):'); if (!hwid) return;
   try{
     wait.style.display='flex';
     document.getElementById('btnGet').disabled=true;
-    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ action:'request_key', hwid, turnstileToken: token })});
+    const r = await fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ action:'request_key', hwid:hwid, turnstileToken: token })});
     const d = await r.json();
-    if(d.ok&&d.key){ const k={key:d.key, expiresAt:d.expiresAt}; setActive(k); renderKeyCard(k); }
+    if(d.ok&&d.key){ renderKeyCard({key:d.key, expiresAt:d.expiresAt}); }
     else alert('Error: '+(d.error||'unknown'));
     await update();
   } finally { document.getElementById('btnGet').disabled=false; wait.style.display='none'; }
 };
 
-// auto refresh progress wanneer je terugkomt
+// Refresh UI whenever you come back from Linkvertise tab
 window.addEventListener('focus', update);
 update();
 </script>
