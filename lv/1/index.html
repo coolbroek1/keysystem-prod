@@ -5,11 +5,11 @@
     var u=new URL(location.href);
     var hwid=u.searchParams.get('hwid')||localStorage.getItem('hwid')||'';
     var hash=u.searchParams.get('hash')||'';
-    var t='/.netlify/functions/lv-verify?step=1';
+    var t='/.netlify/functions/lv-verify?step=2';
     if (hwid) t+='&hwid='+encodeURIComponent(hwid);
     if (hash) t+='&hash='+encodeURIComponent(hash);
     location.replace(t);
   }catch(e){ location.replace('/'); }
 })();
 </script>
-<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Verifying step 1…</body>
+<body style="background:#0b1220;color:#e8ecf4;font-family:Inter">Verifying step 2…</body>
